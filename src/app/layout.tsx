@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Toolbar from "@mui/material/Toolbar";
 import Providers from "@/providers";
 import Box from "@mui/material/Box";
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: "Uniplans",
@@ -25,6 +26,7 @@ export default function RootLayout({
               <Navbar />
               <Toolbar />
                 {children}
+                <Analytics />
             </Box>
           </Providers>
         </AppRouterCacheProvider>
