@@ -52,36 +52,6 @@ export function calculateAvailableModules(
             : SemesterLabel.SpecialTerm2;
     const isOffered = node.semestersOffered.some((sem) => sem === actualSem);
 
-    // Targeted diagnostics for EC4303
-    if (node.code === 'EC4303') {
-      const semName = actualSem === SemesterLabel.First
-        ? 'First'
-        : actualSem === SemesterLabel.Second
-          ? 'Second'
-          : actualSem === SemesterLabel.SpecialTerm1
-            ? 'SpecialTerm1'
-            : 'SpecialTerm2';
-
-      const prereqDetails = prerequisites.map((prereqId) => {
-        const pn = graph.nodes[prereqId] as any;
-        if (!pn) return `missing node ${prereqId}`;
-        if (isModuleData(pn)) {
-          const completed = plannerState.completedModules.has(prereqId);
-          return `${pn.code}: completed=${completed}`;
-        }
-        const st = plannerState.logicStatus[prereqId];
-        const satisfied = Boolean(st?.satisfied);
-        const requires = st?.requires ?? 'n/a';
-        const count = st?.satisfiedCount ?? 'n/a';
-        return `logic(${pn.type || 'NOF'}): satisfied=${satisfied} requires=${requires} count=${count}`;
-      });
-
-      console.log(
-        `🔎 EC4303 @ semester ${currentSemester} (${semName}) -> offered=${isOffered} prereqsOK=${allPrereqsSatisfied}`,
-        { prereqDetails, semestersOffered: node.semestersOffered }
-      );
-    }
-
     if (allPrereqsSatisfied && isOffered) {
       available.add(moduleId);
     }

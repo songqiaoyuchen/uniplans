@@ -15,8 +15,15 @@ export async function getModuleByCode(
   // Extract preclusions from string (same logic as mapModuleData)
   const preclusions: string[] = [];
   if (typeof rawModule.preclusion === "string") {
-    const matches = rawModule.preclusion.match(/\b[A-Z]{2,3}\d{4}[A-Z]?\b/g);
-    if (matches) preclusions.push(...matches);
+    const matches: string[] | null = rawModule.preclusion.match(/\b[A-Z]{2,3}\d{4}[A-Z]?\b/g);
+    if (matches) {
+      const ownCode = moduleCode.toUpperCase();
+
+      // Exclude self-referential preclusions
+      preclusions.push(
+        ...matches.filter(code => code.toUpperCase() !== ownCode)
+      );
+    }
   }
 
   // Convert semester numbers to SemesterLabel enum (align with mapModuleData)

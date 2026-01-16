@@ -43,6 +43,11 @@ export function selectModulesForSemester(
         console.log(`Module ${node.code} is precluded because completed module ${completedNode.code} is in its preclusions`);
         break;
       }
+      if (isModuleData(completedNode) && completedNode.preclusions.includes(node.code)) {
+        isPrecluded = true;
+        console.log(`Module ${node.code} is precluded because it is in the preclusions of completed module ${completedNode.code}`);
+        break;
+      }
     }
     
     // If this module is precluded by completed modules, skip it
@@ -117,7 +122,7 @@ function findBestModule(
   let bestImpact = -1;
 
   for (const moduleId of available) {
-    const impact = calculateImpact(moduleId, plannerState, edgeMap, graph, targetModules);
+    const impact = calculateValue(moduleId, plannerState, edgeMap, graph, targetModules);
     
     if (impact > bestImpact) {
       bestImpact = impact;
@@ -128,74 +133,135 @@ function findBestModule(
   return bestModule;
 }
 
-/**
- * Pure impact scoring: targets = 1.0, others based on path to targets.
- */
-function calculateImpact(
-  moduleId: string, // Now expects ID
+// /**
+//  * Pure impact scoring: targets = 1.0, others based on path to targets.
+//  */
+// function calculateImpact(
+//   moduleId: string, // Now expects ID
+//   plannerState: PlannerState,
+//   edgeMap: EdgeMap,
+//   graph: NormalisedGraph,
+//   targetModules: Set<string> // Now contains IDs
+// ): number {
+//   // Target modules get maximum impact
+//   if (targetModules.has(moduleId)) {
+//     return 100;
+//   }
+
+//   let totalImpact = 0;
+
+//   // All modules have a parent logic node
+//   // Find logic nodes that have this module as a requirement
+//   if (!edgeMap[moduleId]) {
+//     throw new Error(`Module ${moduleId} not found in edgeMap`);
+//   }
+//   const parentLogicNodes = edgeMap[moduleId].in || [];
+
+//   for (const logicNode of parentLogicNodes) {
+//     // If parent logic is already satisfied, zero additional impact
+//     if (plannerState.logicStatus[logicNode]?.satisfied) continue;
+
+//     const unlockValue = calculateUnlockValue(logicNode, edgeMap, graph, targetModules, plannerState);
+    
+//     totalImpact += unlockValue;
+//   }
+
+//   return totalImpact;
+// }
+
+// /**
+//  * Calculate the value of satisfying a logic node (what it unlocks toward targets).
+//  */
+// function calculateUnlockValue(
+//   logicId: string,
+//   edgeMap: EdgeMap,
+//   graph: NormalisedGraph,
+//   targetModules: Set<string>,
+//   plannerState: PlannerState
+// ): number {
+//   // Find what modules/logics require this logic node
+//   const unlockedNodes = edgeMap[logicId].in || [];
+
+//   let unlockValue = 0;
+
+//   for (const nodeId of unlockedNodes) {
+//     const node = graph.nodes[nodeId];
+    
+//     if (isModuleData(node)) {
+//       // Direct target unlock
+//       // if (targetModules.has(nodeId)) {
+//       //   unlockValue += 100;  // High value for direct target unlock
+//       // } else {
+//       //   unlockValue += 0;  // Some value for unlocking any module
+//       // }
+//       unlockValue += 0.8 * calculateImpact(nodeId, plannerState, edgeMap, graph, targetModules);
+//     } else if (isNofNode(node)) {
+//       // Recursively calculate value of unlocking this logic
+//       unlockValue += calculateUnlockValue(nodeId, edgeMap, graph, targetModules, plannerState);
+//     }
+//   }
+
+//   return unlockValue;
+// }
+
+function calculateValue(
+  startID: string,
   plannerState: PlannerState,
   edgeMap: EdgeMap,
   graph: NormalisedGraph,
-  targetModules: Set<string> // Now contains IDs
-): number {
-  // Target modules get maximum impact
-  if (targetModules.has(moduleId)) {
-    return 100.0;
-  }
-
-  let totalImpact = 0;
-
-  // All modules have a parent logic node
-  // Find logic nodes that have this module as a requirement
-  if (!edgeMap[moduleId]) {
-    throw new Error(`Module ${moduleId} not found in edgeMap`);
-  }
-  const parentLogicNodes = edgeMap[moduleId].in || [];
-
-  for (const logicNode of parentLogicNodes) {
-    // If parent logic is already satisfied, zero additional impact
-    if (plannerState.logicStatus[logicNode]?.satisfied) continue;
-
-    const unlockValue = calculateUnlockValue(logicNode, edgeMap, graph, targetModules, plannerState) * 1.2;
-    
-    totalImpact += unlockValue;
-  }
-
-  return Math.min(Number.POSITIVE_INFINITY, totalImpact);
-}
-
-/**
- * Calculate the value of satisfying a logic node (what it unlocks toward targets).
- */
-function calculateUnlockValue(
-  logicId: string,
-  edgeMap: EdgeMap,
-  graph: NormalisedGraph,
   targetModules: Set<string>,
-  plannerState: PlannerState
 ): number {
-  // Find what modules/logics require this logic node
-  const unlockedNodes = edgeMap[logicId].in || [];
+  // Store [CurrentID, Depth]
+  const stack = [] as Array<[string, number]>; 
+  const visited = new Set<string>(); // CRITICAL ADDITION
+  
+  let score = 0;
+  
+  stack.push([startID, 0]);
+  visited.add(startID);
 
-  let unlockValue = 0;
+  while (stack.length > 0) {
+    const [currentID, depth] = stack.pop() as [string, number]; // Renamed variable
 
-  for (const nodeId of unlockedNodes) {
-    const node = graph.nodes[nodeId];
-    
-    if (isModuleData(node)) {
-      // Direct target unlock
-      if (targetModules.has(nodeId)) {
-        unlockValue += 20;  // High value for direct target unlock
-      } else {
-        unlockValue += 0;  // Some value for unlocking any module
+    const node = graph.nodes[currentID];
+
+    // 1. Score Calculation
+    // If we reached a module that is a target, score it.
+    // Note: This includes the starting module itself if it is a target.
+    if (isModuleData(node) && targetModules.has(currentID)) {
+      score += 100 * Math.pow(0.8, depth); 
+    }
+
+    // 2. Traversal
+    // Get parents (nodes that require the current node)
+    const parents = edgeMap[currentID]?.in || [];
+
+    for (const parentID of parents) {
+      // STOP if we've seen this parent in this specific search
+      if (visited.has(parentID)) continue;
+
+      const parentNode = graph.nodes[parentID];
+
+      // STOP if this path is blocked by an already satisfied requirement.
+      // If the parent is a Logic Node and it is already satisfied, 
+      // adding more modules to it yields 0 marginal value.
+      if (isNofNode(parentNode)) {
+         const status = plannerState.logicStatus[parentID];
+         if (status?.satisfied) continue;
       }
-    } else if (isNofNode(node)) {
-      // Recursively calculate value of unlocking this logic
-      unlockValue += calculateUnlockValue(nodeId, edgeMap, graph, targetModules, plannerState);
+
+      visited.add(parentID);
+      stack.push([parentID, depth + 1]);
     }
   }
 
-  return unlockValue;
+  const startCode = isModuleData(graph.nodes[startID]) ? graph.nodes[startID].code : startID;
+  const isGradModule = (code: string) => /^[a-zA-Z]*[56].*$/.test(code);
+  if (isGradModule(startCode)) {
+    score *= 0.1; // Deprioritise grad modules slightly
+  }
+
+  return score;
 }
 
 /**
