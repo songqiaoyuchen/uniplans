@@ -57,6 +57,7 @@ const handleSearch = async (_: any, mod: MiniModuleData | null) => {
   return (
     <Autocomplete
       sx={{ width: "100%" }}
+      autoHighlight
       open={Boolean(query.trim())}
       options={results}
       noOptionsText="No matching modules"

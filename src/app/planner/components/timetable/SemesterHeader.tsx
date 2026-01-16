@@ -109,7 +109,7 @@ export default function SemesterHeader({ semesterId, isEmpty }: SemesterHeaderPr
           >
             {totalCredits} {isMinimalView && "Units"}
 
-            {semesterGpa !== null && (
+            {semesterGpa !== null && !isMinimalView&& (
               <>
                 {/* The Separator */}
                 <Box 
