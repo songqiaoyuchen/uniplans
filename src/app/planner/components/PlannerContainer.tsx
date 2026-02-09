@@ -166,7 +166,7 @@ const PlannerContainer: React.FC = () => {
 
         {/* overlay modulecard */}
         {createPortal(
-          <DragOverlay>
+          <DragOverlay zIndex={1400}>
             {draggingModuleCode && draggingModule && (
               isMinimalView 
                 ? <MiniModuleCard module={draggingModule} isDragging/>

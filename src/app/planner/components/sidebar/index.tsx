@@ -179,12 +179,30 @@ const Sidebar: React.FC = () => {
       <Box
         sx={{
           display: "flex",
-          gap: 1,
+          gap: "8px",
           padding: "12px 16px",
           backgroundColor: "transparent",
-          paddingBottom: 0
+          paddingBottom: 0,
+          position: "relative",
         }}
       >
+        <motion.div
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 16,
+            height: 48,
+            width: "calc((100% - 32px - 8px) / 2)",
+            backgroundColor: theme.palette.primary.main,
+            borderRadius: "8px",
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+          animate={{
+            x: tabValue === 0 ? 0 : "calc(100% + 8px)",
+          }}
+          transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 30 }}
+        />
         {tabs.map((tab, index) => (
           <Box
             key={index}
@@ -210,19 +228,6 @@ const Sidebar: React.FC = () => {
             aria-pressed={tabValue === index}
             aria-label={`${tab.label} tab`}
           >
-            {tabValue === index && (
-              <motion.div
-                layoutId="mobile-tab-indicator"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundColor: theme.palette.primary.main,
-                  borderRadius: "8px",
-                  zIndex: -1,
-                }}
-                transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
             <Box sx={{ display: "flex", alignItems: "center" }}>
               {tab.icon}
             </Box>
