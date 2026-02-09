@@ -5,8 +5,6 @@ import Divider from '@mui/material/Divider';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import FlagIcon from '@mui/icons-material/Flag';
 import BlockIcon from '@mui/icons-material/Block';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Switch from '@mui/material/Switch';
 import IconButton from '@mui/material/IconButton';
 import AddIcon from '@mui/icons-material/Add';
@@ -149,12 +147,12 @@ const Generate: React.FC = () => {
     const preservedData: Record<number, string[]> = {};
     
     if (preserveTimetable && preserveSemesters > 0) {
-       const sortedSemesters = [...allSemesters].sort((a, b) => a.id - b.id);
-       const semestersToPreserve = sortedSemesters.filter(s => s.id < preserveSemesters * 2);
+      const sortedSemesters = [...allSemesters].sort((a, b) => a.id - b.id);
+      const semestersToPreserve = sortedSemesters.filter(s => s.id < preserveSemesters * 2);
        
-       semestersToPreserve.forEach(s => {
-         preservedData[s.id] = s.moduleCodes;
-       });
+      semestersToPreserve.forEach(s => {
+        preservedData[s.id] = s.moduleCodes;
+      });
     }
 
     // Trigger the timetable generation
@@ -168,11 +166,11 @@ const Generate: React.FC = () => {
     });
   };
 
-  const handleSpecialTermsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSpecialTermsChange = () => {
     dispatch(specialTermsToggled());
   };
 
-  const handlePreserveTimetableChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePreserveTimetableChange = () => {
     dispatch(preserveTimetableToggled());
   };
 
@@ -395,22 +393,22 @@ const Generate: React.FC = () => {
           )}
         </Box>
 
-      {/* Snackbar for generation feedback */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={1500}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
+        {/* Snackbar for generation feedback */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={1500}
           onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Box>
 
       {/* Generate Button */}

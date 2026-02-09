@@ -1,6 +1,5 @@
 import { uploadModules } from "./uploadModules";
 import { deduplicateLogicNodes } from "./deduplicateLogicNodes";
-import { downloadData } from "./downloadData";
 import { deleteGraph } from "./deleteGraph";
 import { deleteYSCModules } from "./deleteYSCModules";
 import { uploadAllPrereqTrees } from "./uploadPrerequisites";

@@ -92,7 +92,7 @@ const ModuleGradeDropdown: React.FC<ModuleGradeDropdownProps> = ({ moduleCode, c
             transform: 'translateY(-1px)'
           },
           '&:active': {
-             transform: 'translateY(0px)'
+            transform: 'translateY(0px)'
           }
         }}
       >

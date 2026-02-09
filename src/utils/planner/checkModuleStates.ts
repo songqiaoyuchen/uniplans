@@ -64,7 +64,7 @@ export function checkModuleStates(
       const current = moduleEntities[code];
       if (!current) continue;
 
-      const module = moduleEntities[code];
+      const mod = moduleEntities[code];
       let status: ModuleStatus;
       let issues: ModuleIssue[] = conflictMap.get(code) || [];
 
@@ -76,8 +76,8 @@ export function checkModuleStates(
         issues = conflictMap.get(code) || [];
 
         // Always check for prereq satisfaction
-        const prereqSatisfied = !module?.requires || evaluatePrereqTree(
-          module.requires,
+        const prereqSatisfied = !mod?.requires || evaluatePrereqTree(
+          mod.requires,
           (prereqRaw) => {
             const prereq = stripQualifier(prereqRaw);
             // Support wildcard prerequisites like "EC%", "MA2*" etc.
@@ -276,26 +276,26 @@ function evaluatePrereqTree(
   countMatches: (code: string) => number
 ): boolean {
   switch (tree.type) {
-    case 'module':
-      return isSatisfied(tree.moduleCode);
-    case 'AND':
-      return tree.children.every(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
-    case 'OR':
-      return tree.children.some(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
-    case 'NOF': {
-      // Count satisfied children; wildcard module children count all matching satisfied modules
-      let count = 0;
-      for (const ch of tree.children) {
-        if (ch.type === 'module' && hasWildcard(stripQualifier(ch.moduleCode))) {
-          count += countMatches(ch.moduleCode);
-        } else {
-          count += evaluatePrereqTree(ch, isSatisfied, countMatches) ? 1 : 0;
-        }
+  case 'module':
+    return isSatisfied(tree.moduleCode);
+  case 'AND':
+    return tree.children.every(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
+  case 'OR':
+    return tree.children.some(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
+  case 'NOF': {
+    // Count satisfied children; wildcard module children count all matching satisfied modules
+    let count = 0;
+    for (const ch of tree.children) {
+      if (ch.type === 'module' && hasWildcard(stripQualifier(ch.moduleCode))) {
+        count += countMatches(ch.moduleCode);
+      } else {
+        count += evaluatePrereqTree(ch, isSatisfied, countMatches) ? 1 : 0;
       }
-      return count >= (tree.n ?? 1);
     }
-    default:
-      return false;
+    return count >= (tree.n ?? 1);
+  }
+  default:
+    return false;
   }
 }
 

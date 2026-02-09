@@ -62,26 +62,26 @@ const ImportTimetableDialog: React.FC<ImportTimetableDialogProps> = ({
             borderRadius: 3, 
             padding: 1,
             boxShadow: theme.shadows[10] 
-        } 
-      }}}
+          } 
+        }}}
     >
       <DialogTitle sx={{ pb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ 
-                bgcolor: alpha(theme.palette.secondary.main, 0.15), 
-                color: 'secondary.main', 
-                p: 1.2, 
-                borderRadius: 2, // Slightly squared corners look more modern/distinct
-                display: 'flex',
-                border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` // Subtle border for definition
-            }}>
-                <CloudDownloadIcon />
-            </Box>
-            <Box>
-                <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
+          <Box sx={{ 
+            bgcolor: alpha(theme.palette.secondary.main, 0.15), 
+            color: 'secondary.main', 
+            p: 1.2, 
+            borderRadius: 2, // Slightly squared corners look more modern/distinct
+            display: 'flex',
+            border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` // Subtle border for definition
+          }}>
+            <CloudDownloadIcon />
+          </Box>
+          <Box>
+            <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     Import Timetable
-                </Typography>
-            </Box>
+            </Typography>
+          </Box>
         </Box>
       </DialogTitle>
 

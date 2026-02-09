@@ -43,8 +43,8 @@ export const store = configureStore({
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
       },
     })
-    .concat(apiSlice.middleware)
-    .prepend(listenerMiddleware.middleware), 
+      .concat(apiSlice.middleware)
+      .prepend(listenerMiddleware.middleware), 
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -152,10 +152,10 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
 
 export const importTimetableFromSnapshot =
   (snapshot: TimetableSnapshot, name: string) =>
-  async (dispatch: AppDispatch) => {
+    async (dispatch: AppDispatch) => {
 
-    // fetch full module data
-    const modulesData: ModuleData[] = (
+      // fetch full module data
+      const modulesData: ModuleData[] = (
       await Promise.all(
         snapshot.modules.map(async ({ code, tags }) => {
           try {
@@ -171,23 +171,23 @@ export const importTimetableFromSnapshot =
       )
     ).filter(Boolean) as ModuleData[];
 
-    // nuild entity states
-    const modules = modulesAdapter.setAll(
-      modulesAdapter.getInitialState(),
-      modulesData
-    );
+      // nuild entity states
+      const modules = modulesAdapter.setAll(
+        modulesAdapter.getInitialState(),
+        modulesData
+      );
 
-    const semesters = semestersAdapter.setAll(
-      semestersAdapter.getInitialState(),
-      snapshot.semesters.map((codes, id) => ({
-        id,
-        moduleCodes: codes,
-      }))
-    );
+      const semesters = semestersAdapter.setAll(
+        semestersAdapter.getInitialState(),
+        snapshot.semesters.map((codes, id) => ({
+          id,
+          moduleCodes: codes,
+        }))
+      );
 
-    // update store
-    dispatch(timetableAdded({ name }));
-    dispatch(timetableUpdated({ name, modules, semesters }));
-    dispatch(switchTimetable(name));
-    dispatch(updateModuleStates());
-  };
+      // update store
+      dispatch(timetableAdded({ name }));
+      dispatch(timetableUpdated({ name, modules, semesters }));
+      dispatch(switchTimetable(name));
+      dispatch(updateModuleStates());
+    };

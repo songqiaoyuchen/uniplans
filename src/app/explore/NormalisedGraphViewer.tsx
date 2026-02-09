@@ -26,7 +26,7 @@ interface GraphViewerProps {
 
 export default function GraphViewer({ graph }: GraphViewerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
-  const cyInstance = useRef<any>(null);
+  const cyInstance = useRef<cytoscape.Core | null>(null);
   const [stats, setStats] = useState({ nodes: 0, edges: 0 });
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function GraphViewer({ graph }: GraphViewerProps) {
       cyInstance.current.destroy();
     }
 
-    const elements: { data: any }[] = [];
+    const elements: cytoscape.ElementDefinition[] = [];
 
     // Add nodes
     for (const [id, node] of Object.entries(graph.nodes)) {
@@ -129,13 +129,13 @@ export default function GraphViewer({ graph }: GraphViewerProps) {
       ],
       layout: {
         name: "dagre",
-        rankDir: "TB",
         nodeSep: 60,
         edgeSep: 40,
         rankSep: 80,
         padding: 40,
         fit: true,
         animate: false, // Animation disabled on load as per original pref
+        rankDir: "TB",
       } as any,
     });
 
@@ -156,7 +156,10 @@ export default function GraphViewer({ graph }: GraphViewerProps) {
   }, [graph]);
 
   // --- Controls Handlers ---
-  const handleFit = () => cyInstance.current?.animate({ fit: { padding: 40 }, duration: 400 });
+  const handleFit = () => cyInstance.current?.animate({ fit: {
+    padding: 40,
+    eles: cyInstance.current.elements()
+  }, duration: 400 });
   
   const handleZoomIn = () => {
     if (!cyInstance.current) return;

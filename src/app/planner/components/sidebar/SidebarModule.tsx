@@ -14,8 +14,8 @@ interface SidebarModuleProps {
 const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { module, isPlanned, isLoading, isError } = useModuleState(moduleCode);
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { mod, isPlanned, isLoading, isError } = useModuleState(moduleCode);
+  const { attributes, listeners, setNodeRef } = useDraggable({
     id: moduleCode + '-sidebar',
     disabled: isPlanned,
     data: {
@@ -29,12 +29,12 @@ const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
   const handleClick = useCallback(() => {
     router.push(`?module=${moduleCode}`, { scroll: false });
     dispatch(moduleSelected(moduleCode))
-  }, [moduleCode]);
+  }, [moduleCode, dispatch, router]);
 
   if (isLoading) {
     return <ModuleTooltipPlaceholder />
   }
-  if (isError || !module) {
+  if (isError || !mod) {
     return (
       <div style={{ 
         padding: '4px 8px',
@@ -56,7 +56,7 @@ const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
       style={{ touchAction: "none" }}
     >
       <ModuleTooltip 
-        module={module}
+        module={mod}
         isPlanned={isPlanned}
       />
     </div>

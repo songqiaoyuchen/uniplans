@@ -9,14 +9,10 @@ import { targetModuleAdded, targetModuleRemoved, exemptedModuleRemoved } from "@
 
 interface TargetedButtonProps {
   moduleCode: string;
-  size?: "small" | "medium" | "large";
-  fullWidth?: boolean;
 }
 
 const TargetedButton: React.FC<TargetedButtonProps> = ({ 
-  moduleCode, 
-  size = "small",
-  fullWidth = false 
+  moduleCode
 }) => {
   const dispatch = useAppDispatch();
   

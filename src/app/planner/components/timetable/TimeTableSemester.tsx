@@ -20,7 +20,7 @@ const TimetableSemester: React.FC<TimetableSemesterProps> = ({ semesterId }) => 
     data: {
       type: 'semester',
       semesterId: semesterId,
-  },
+    },
   });
 
   return (

@@ -31,26 +31,26 @@ export async function getModuleByCode(
   if (Array.isArray(rawModule.semesterData)) {
     for (const semData of rawModule.semesterData) {
       switch (semData.semester) {
-        case 1:
-          semestersOffered.push(SemesterLabel.First);
-          break;
-        case 2:
-          semestersOffered.push(SemesterLabel.Second);
-          break;
-        case 3:
-          semestersOffered.push(SemesterLabel.SpecialTerm1);
-          break;
-        case 4:
-          semestersOffered.push(SemesterLabel.SpecialTerm2);
-          break;
-        default:
-          break;
+      case 1:
+        semestersOffered.push(SemesterLabel.First);
+        break;
+      case 2:
+        semestersOffered.push(SemesterLabel.Second);
+        break;
+      case 3:
+        semestersOffered.push(SemesterLabel.SpecialTerm1);
+        break;
+      case 4:
+        semestersOffered.push(SemesterLabel.SpecialTerm2);
+        break;
+      default:
+        break;
       }
     }
   }
 
   // Transform raw module data to match ModuleData type
-  const module: ModuleData = {
+  const mod: ModuleData = {
     id: "", // neo4j node id not available in static data
     code: rawModule.moduleCode,
     title: rawModule.title,
@@ -66,8 +66,8 @@ export async function getModuleByCode(
   // Fetch and attach prerequisites
   const requires = await getModuleRequires(moduleCode);
   if (requires) {
-    module.requires = requires;
+    mod.requires = requires;
   }
 
-  return module;
+  return mod;
 }

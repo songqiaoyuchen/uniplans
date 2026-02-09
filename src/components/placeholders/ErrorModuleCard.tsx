@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, Box, Typography, IconButton } from '@mui/material';
+import { Card, Typography, IconButton } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useTheme } from '@mui/material/styles';
 import { useDispatch } from 'react-redux';

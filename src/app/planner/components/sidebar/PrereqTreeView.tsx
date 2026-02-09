@@ -154,7 +154,7 @@ const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
   );
 };
 
-const StyledTreeItem = styled(TreeItem)(({ theme }) => ({
+const StyledTreeItem = styled(TreeItem)(() => ({
   // Remove all interactive visual cues
   [`& .${treeItemClasses.content}`]: {
     backgroundColor: "transparent",

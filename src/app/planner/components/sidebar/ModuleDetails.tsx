@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleData, ModuleIssue, ModuleStatus, SemesterLabel } from "@/types/plannerTypes";
+import { ModuleData, ModuleIssue, SemesterLabel } from "@/types/plannerTypes";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
@@ -8,7 +8,6 @@ import ExpandableText from "@/components/ui/ExpandableText";
 import PrereqTreeView from "./PrereqTreeView";
 import DraggableAddButton from "./DraggableAddButton";
 import { memo } from "react";
-import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import TargetedButton from "./TargetedButton";
 import ExemptedButton from "./ExemptedButton";
 import { useAppSelector } from "@/store";
@@ -20,18 +19,6 @@ interface ModuleDetailsProps {
 }
 
 const ModuleDetails: React.FC<ModuleDetailsProps> = ({ module, isPlanned }) => {
-  const targetModuleCodes = useAppSelector((state: RootState) => {
-    const targeted = state.timetable.targetModules;
-    return Array.isArray(targeted) ? targeted : [];
-  });
-
-  const exemptedModuleCodes = useAppSelector((state: RootState) => {
-    const exempted = state.timetable.exemptedModules;
-    return Array.isArray(exempted) ? exempted : [];
-  });
-
-  const isTargeted = targetModuleCodes.includes(module.code);
-  const isExempted = exemptedModuleCodes.includes(module.code);
 
   return (
     <Box
@@ -58,8 +45,8 @@ const ModuleDetails: React.FC<ModuleDetailsProps> = ({ module, isPlanned }) => {
         
         {/* Toggle Buttons for Target/Exempt */}
         <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-          <TargetedButton moduleCode={module.code} size="small" />
-          <ExemptedButton moduleCode={module.code} size="small" />
+          <TargetedButton moduleCode={module.code} />
+          <ExemptedButton moduleCode={module.code} />
         </Box>
       </Box>
 
@@ -150,16 +137,16 @@ function formatSemesters(semesters: SemesterLabel[]): string {
   return semesters
     .map((s) => {
       switch (s) {
-        case SemesterLabel.First:
-          return "Semester 1";
-        case SemesterLabel.Second:
-          return "Semester 2";
-        case SemesterLabel.SpecialTerm1:
-          return "Special Term 1";
-        case SemesterLabel.SpecialTerm2:
-          return "Special Term 2";
-        default:
-          return "Unknown";
+      case SemesterLabel.First:
+        return "Semester 1";
+      case SemesterLabel.Second:
+        return "Semester 2";
+      case SemesterLabel.SpecialTerm1:
+        return "Special Term 1";
+      case SemesterLabel.SpecialTerm2:
+        return "Special Term 2";
+      default:
+        return "Unknown";
       }
     })
     .join(", ");
@@ -167,15 +154,15 @@ function formatSemesters(semesters: SemesterLabel[]): string {
 
 function renderIssue(issue: ModuleIssue): string {
   switch (issue.type) {
-    case "PrereqUnsatisfied":
-      return "Prerequisites not satisfied.";
-    case "Precluded":
-      return `Precluded by: ${issue.with.join(", ")}`;
-    case "InvalidSemester":
-      return "Not offered in this semester.";
-    case "ExamClash":
-      return `Exam clash with: ${issue.with.join(", ")}`;
-    default:
-      return "Unknown issue.";
+  case "PrereqUnsatisfied":
+    return "Prerequisites not satisfied.";
+  case "Precluded":
+    return `Precluded by: ${issue.with.join(", ")}`;
+  case "InvalidSemester":
+    return "Not offered in this semester.";
+  case "ExamClash":
+    return `Exam clash with: ${issue.with.join(", ")}`;
+  default:
+    return "Unknown issue.";
   }
 }

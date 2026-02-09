@@ -72,8 +72,8 @@ const MiniModuleCard: React.FC<MiniModuleCardProps> = ({
           border: isSelected
             ? selectedOutline
             : isRelated
-            ? relatedOutline
-            : baseOutline,
+              ? relatedOutline
+              : baseOutline,
 
           // Keep glow visible; do not animate box-shadow
           boxShadow: isSelected ? selectedShadow : 'none',

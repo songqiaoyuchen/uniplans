@@ -36,22 +36,22 @@ const ModuleSearch = () => {
       .slice(0, 15);
   }, [fuse, query]);
 
-const handleSearch = async (_: any, mod: MiniModuleData | null) => {
-  if (!mod) return;
+  const handleSearch = async (_: any, mod: MiniModuleData | null) => {
+    if (!mod) return;
 
-  setQuery("");
-  setValue(null);
+    setQuery("");
+    setValue(null);
 
-  dispatch(moduleSelected(mod.code));
+    dispatch(moduleSelected(mod.code));
 
-  // naviagte
-  router.push(`?module=${mod.code}`, { scroll: false });
+    // naviagte
+    router.push(`?module=${mod.code}`, { scroll: false });
 
-  // blur search box
-  if (inputRef.current) {
-    inputRef.current.blur();
-  }
-};
+    // blur search box
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  };
 
 
   return (

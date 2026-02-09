@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography, Button, Container, Stack, alpha } from "@mui/material";
+import { Box, Typography, Button, Container, Stack } from "@mui/material";
 
 import Grid from "@mui/material/Grid";
 
@@ -11,7 +11,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import FlagIcon from '@mui/icons-material/Flag';
-import App from "next/app";
 
 // --- ASSETS ---
 // Make sure these files exist in your public/assets/ folder
@@ -49,7 +48,7 @@ export default function Home() {
 
             <ScrollReveal delay={0.1}>
               <Typography variant="h5" sx={{ color: "#a1a1aa", mb: 5, lineHeight: 1.6, maxWidth: "700px", mx: "auto", fontWeight: 400 }}>
-                Most planners make you build Year 1 first. We don't.<br />
+                Most planners make you build Year 1 first. We don&apos;t.<br />
                 Tell us the degree you want in Year 4, and we auto-generate the complete path to get you there.
               </Typography>
             </ScrollReveal>
@@ -183,7 +182,7 @@ export default function Home() {
                 <StepLabel num="03" title="The Refinement" color="#f472b6" />
                 <Typography variant="h4" fontWeight="bold" sx={{ mb: 2, color: "white" }}>Make it Yours</Typography>
                 <Typography variant="body1" sx={{ color: "#a1a1aa", fontSize: "1.05rem", lineHeight: 1.7, mb: 3 }}>
-                  The auto-generated plan is just a starting point. Drag cards to different semesters to balance your workload. We act as your safety net—flagging any issues if you break a rule or pick a module that isn't offered.
+                  The auto-generated plan is just a starting point. Drag cards to different semesters to balance your workload. We act as your safety net—flagging any issues if you break a rule or pick a module that isn&apos;t offered.
                 </Typography>
                 <InstructionPoint text="Drag-and-drop customization" />
                 <InstructionPoint text="Instant error checking & validation" />
@@ -237,9 +236,9 @@ export default function Home() {
 function StepLabel({ num, title, color = "#a78bfa" }: { num: string, title: string, color?: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-       <Typography variant="h6" sx={{ color: color, fontWeight: 700 }}>{num}</Typography>
-       <Box sx={{ width: '40px', height: '1px', bgcolor: '#3f3f46' }} />
-       <Typography variant="subtitle2" sx={{ color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</Typography>
+      <Typography variant="h6" sx={{ color: color, fontWeight: 700 }}>{num}</Typography>
+      <Box sx={{ width: '40px', height: '1px', bgcolor: '#3f3f46' }} />
+      <Typography variant="subtitle2" sx={{ color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</Typography>
     </Box>
   )
 }

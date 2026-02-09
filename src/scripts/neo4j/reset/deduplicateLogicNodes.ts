@@ -83,39 +83,39 @@ function buildDeduplicationQuery(logicType: LogicType) {
   let matchClause, withClause;
 
   switch (logicType) {
-    case "NOF":
-      // For NOF: group by threshold + ALL outgoing relationships
-      matchClause = `MATCH (l:Logic {type: "NOF"})
+  case "NOF":
+    // For NOF: group by threshold + ALL outgoing relationships
+    matchClause = `MATCH (l:Logic {type: "NOF"})
                      OPTIONAL MATCH (l)-[:OPTION]->(opt)
                      OPTIONAL MATCH (l)-[:REQUIRES]->(req)`;
-      withClause = `WITH l, l.threshold AS threshold, 
+    withClause = `WITH l, l.threshold AS threshold, 
                          apoc.coll.sort(collect(DISTINCT id(opt))) AS optionChildren,
                          apoc.coll.sort(collect(DISTINCT id(req))) AS requiresChildren
                     WITH threshold, optionChildren, requiresChildren, collect(l) AS logicGroup`;
-      break;
+    break;
 
-    case "AND":
-      // For AND: group by ALL outgoing relationships
-      matchClause = `MATCH (l:Logic {type: "AND"})
+  case "AND":
+    // For AND: group by ALL outgoing relationships
+    matchClause = `MATCH (l:Logic {type: "AND"})
                      OPTIONAL MATCH (l)-[:REQUIRES]->(req)
                      OPTIONAL MATCH (l)-[:OPTION]->(opt)`;
-      withClause = `WITH l, 
+    withClause = `WITH l, 
                          apoc.coll.sort(collect(DISTINCT id(req))) AS requiresChildren,
                          apoc.coll.sort(collect(DISTINCT id(opt))) AS optionChildren
                     WITH requiresChildren, optionChildren, collect(l) AS logicGroup`;
-      break;
+    break;
 
-    case "OR":
-    default:
-      // For OR: group by ALL outgoing relationships
-      matchClause = `MATCH (l:Logic {type: "OR"})
+  case "OR":
+  default:
+    // For OR: group by ALL outgoing relationships
+    matchClause = `MATCH (l:Logic {type: "OR"})
                      OPTIONAL MATCH (l)-[:OPTION]->(opt)
                      OPTIONAL MATCH (l)-[:REQUIRES]->(req)`;
-      withClause = `WITH l, 
+    withClause = `WITH l, 
                          apoc.coll.sort(collect(DISTINCT id(opt))) AS optionChildren,
                          apoc.coll.sort(collect(DISTINCT id(req))) AS requiresChildren
                     WITH optionChildren, requiresChildren, collect(l) AS logicGroup`;
-      break;
+    break;
   }
 
   return `

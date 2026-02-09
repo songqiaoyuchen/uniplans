@@ -92,14 +92,14 @@ function Timetable() {
                         width: '100%',
                         fontWeight: isMinimalView ? 500 : 600,
                         py: isMinimalView ? 0.5 : 1,
-                       }}
+                      }}
                     >
                       + Special Term
                     </Button>
                   )}
                 </Box>
               </Box>);
-            })}
+          })}
         {/* Add Semester */}
         <Box
           sx={{

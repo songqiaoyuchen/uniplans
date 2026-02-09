@@ -24,7 +24,7 @@ const TimetableModule: React.FC<TimetableModuleProps> = ({ moduleCode, semesterI
   const router = useRouter();
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
 
-  const { module, isFetching, isError, isSelected, isRelated, refetch } = useModuleState(moduleCode);
+  const { mod, isFetching, isError, isSelected, isRelated, refetch } = useModuleState(moduleCode);
 
   const {
     attributes,
@@ -50,7 +50,7 @@ const TimetableModule: React.FC<TimetableModuleProps> = ({ moduleCode, semesterI
       opacity: isDragging ? 0.4 : 1,
       touchAction: "none",
     }),
-    [transform, transition]
+    [transform, transition, isDragging]
   );
 
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -62,7 +62,7 @@ const TimetableModule: React.FC<TimetableModuleProps> = ({ moduleCode, semesterI
       dispatch(moduleSelected(moduleCode))
       router.push(`?module=${moduleCode}`, { scroll: false });
     }
-  }, [dispatch, isSelected, moduleCode]);
+  }, [dispatch, isSelected, moduleCode, router]);
 
   if (isFetching) {
     const Placeholder = isMinimalView
@@ -78,7 +78,7 @@ const TimetableModule: React.FC<TimetableModuleProps> = ({ moduleCode, semesterI
     );
   }
 
-  if (isError || !module) {
+  if (isError || !mod) {
     const ErrorPlaceholder = isMinimalView
       ? MiniErrorModuleCard
       : ErrorModuleCard;
@@ -105,8 +105,8 @@ const TimetableModule: React.FC<TimetableModuleProps> = ({ moduleCode, semesterI
       onClick={handleClick}
     >
       {isMinimalView 
-        ? (<MiniModuleCard module={module} isSelected={isSelected} isRelated={isRelated} />) 
-        : (<ModuleCard module={module} isSelected={isSelected} isRelated={isRelated} />)}
+        ? (<MiniModuleCard module={mod} isSelected={isSelected} isRelated={isRelated} />) 
+        : (<ModuleCard module={mod} isSelected={isSelected} isRelated={isRelated} />)}
     </div>
   );
 };

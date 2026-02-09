@@ -34,11 +34,11 @@ const SemesterColumn: React.FC<SemesterColumnProps> = ({ semesterId, moduleCodes
     >
       <SemesterHeader semesterId={semesterId} isEmpty={moduleCodes.length === 0} />
       {moduleCodes.length > 0 && (
-      <Stack spacing={1} direction="column" sx={{ gap: 1, height: '100%' }}>
-        {moduleCodes.map((code) => (
-          <TimetableModule key={code} moduleCode={code} semesterId={semesterId} />
-        ))}
-      </Stack>)}
+        <Stack spacing={1} direction="column" sx={{ gap: 1, height: '100%' }}>
+          {moduleCodes.map((code) => (
+            <TimetableModule key={code} moduleCode={code} semesterId={semesterId} />
+          ))}
+        </Stack>)}
     </Box>
   );
 };

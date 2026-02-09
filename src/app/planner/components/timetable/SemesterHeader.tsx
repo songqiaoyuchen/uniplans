@@ -19,16 +19,16 @@ const getSemesterTitles = (semesterId: number): { full: string; abbrev: string }
   const semesterType = semesterId % 4;
 
   switch (semesterType) {
-    case SemesterLabel.First:
-      return { full: `Year ${year} Semester 1`, abbrev: `Y${year}S1` };
-    case SemesterLabel.SpecialTerm1:
-      return { full: `Year ${year} Winter`, abbrev: `Y${year} Winter` };
-    case SemesterLabel.Second:
-      return { full: `Year ${year} Semester 2`, abbrev: `Y${year}S2` };
-    case SemesterLabel.SpecialTerm2:
-      return { full: `Year ${year} Summer`, abbrev: `Y${year} Summer` };
-    default:
-      return { full: `Year ${year}`, abbrev: `Y${year}` };
+  case SemesterLabel.First:
+    return { full: `Year ${year} Semester 1`, abbrev: `Y${year}S1` };
+  case SemesterLabel.SpecialTerm1:
+    return { full: `Year ${year} Winter`, abbrev: `Y${year} Winter` };
+  case SemesterLabel.Second:
+    return { full: `Year ${year} Semester 2`, abbrev: `Y${year}S2` };
+  case SemesterLabel.SpecialTerm2:
+    return { full: `Year ${year} Summer`, abbrev: `Y${year} Summer` };
+  default:
+    return { full: `Year ${year}`, abbrev: `Y${year}` };
   }
 };
 
@@ -96,46 +96,46 @@ export default function SemesterHeader({ semesterId, isEmpty }: SemesterHeaderPr
             <CloseIcon sx={{ fontSize: 12, color: 'inherit' }} />
           </IconButton>
         )
-        : (
-          <Typography
-            variant={isMinimalView ? "caption" : "body2"}
-            color="text.secondary"
-            sx={{
-              px: isMinimalView ? 0.5 : 0,
-              textAlign: "right",
-              whiteSpace: "nowrap", 
-              width: isMinimalView ? "100%" : "auto",
-            }}
-          >
-            {totalCredits} {isMinimalView && "Units"}
+          : (
+            <Typography
+              variant={isMinimalView ? "caption" : "body2"}
+              color="text.secondary"
+              sx={{
+                px: isMinimalView ? 0.5 : 0,
+                textAlign: "right",
+                whiteSpace: "nowrap", 
+                width: isMinimalView ? "100%" : "auto",
+              }}
+            >
+              {totalCredits} {isMinimalView && "Units"}
 
-            {semesterGpa !== null && !isMinimalView&& (
-              <>
-                {/* The Separator */}
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    mx: 0.4, // Horizontal spacing around the slash
-                    color: 'text.disabled',
-                    userSelect: 'none' // User can copy text without copying the slash
-                  }}
-                >
+              {semesterGpa !== null && !isMinimalView&& (
+                <>
+                  {/* The Separator */}
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      mx: 0.4, // Horizontal spacing around the slash
+                      color: 'text.disabled',
+                      userSelect: 'none' // User can copy text without copying the slash
+                    }}
+                  >
                   /
-                </Box>
+                  </Box>
 
-                {/* The GPA Value */}
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    fontWeight: 600, // Slightly bolder than normal text
-                  }}
-                >
-                  {semesterGpa.toFixed(2)} {isMinimalView && "SGPA"}
-                </Box>
-              </>
-            )}
-          </Typography>
-        )}
+                  {/* The GPA Value */}
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      fontWeight: 600, // Slightly bolder than normal text
+                    }}
+                  >
+                    {semesterGpa.toFixed(2)} {isMinimalView && "SGPA"}
+                  </Box>
+                </>
+              )}
+            </Typography>
+          )}
       </Paper>
     </Box>
   );

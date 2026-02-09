@@ -59,16 +59,16 @@ export function mapModuleData(node: NeoNode): ModuleData {
     if (Array.isArray(semesterArray)) {
       semestersOffered = semesterArray.map((s: any) => {
         switch (s.semester) {
-          case 1:
-            return SemesterLabel.First;
-          case 2:
-            return SemesterLabel.Second;
-          case 3:
-            return SemesterLabel.SpecialTerm1;
-          case 4:
-            return SemesterLabel.SpecialTerm2;
-          default:
-            return null;
+        case 1:
+          return SemesterLabel.First;
+        case 2:
+          return SemesterLabel.Second;
+        case 3:
+          return SemesterLabel.SpecialTerm1;
+        case 4:
+          return SemesterLabel.SpecialTerm2;
+        default:
+          return null;
         }
       }) as SemesterLabel[];
 

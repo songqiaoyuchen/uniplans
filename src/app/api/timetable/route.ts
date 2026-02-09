@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMergedTree } from '@/db/getMergedTree';
-import { pruneGraph } from '@/utils/graph/pruneGraph';
 import { normaliseNodes } from '@/utils/graph/normaliseNodes';
 import { runScheduler } from '@/utils/graph/algo/schedule';
 import { ErrorResponse } from '@/types/errorTypes';

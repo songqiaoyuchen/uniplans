@@ -50,14 +50,14 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, isSelected = false, isR
         border: isSelected
           ? selectedBorder
           : isRelated
-          ? relatedBorder
-          : baseBorder,
+            ? relatedBorder
+            : baseBorder,
 
         boxShadow: isSelected
           ? selectedShadow
           : isRelated
-          ? relatedShadow
-          : theme.shadows[2], 
+            ? relatedShadow
+            : theme.shadows[2], 
 
         transition:
           "box-shadow 0.25s ease, transform 0.25s ease, border-color 0.2s ease",
@@ -65,9 +65,9 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, isSelected = false, isR
         "&:hover": isSelected
           ? { boxShadow: selectedShadow }
           : {
-              boxShadow: theme.shadows[8],
-              transform: "translateY(-3px)",
-            },
+            boxShadow: theme.shadows[8],
+            transform: "translateY(-3px)",
+          },
         color: theme.palette.text.primary,
       }}
     >

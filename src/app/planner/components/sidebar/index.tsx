@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { toggleSidebar, setActiveTab } from "@/store/sidebarSlice";
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import ModuleDetails from "./ModuleDetails";
@@ -12,8 +11,8 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ModuleSearch from "./ModuleSearch";
 import { useModuleState } from "../../hooks";
-import { MOBILE_DRAWER_HEIGHT, SIDEBAR_WIDTH } from "@/constants";
-import { useRouter, useSearchParams } from "next/navigation";
+import { SIDEBAR_WIDTH } from "@/constants";
+import { useSearchParams } from "next/navigation";
 import CircularProgress from "@mui/material/CircularProgress";
 import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
@@ -35,7 +34,6 @@ const Sidebar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up("lg"));
-  const isXLargeScreen = useMediaQuery(theme.breakpoints.up("xl"));
 
   const sidebarWidth = isLargeScreen ? 336 : SIDEBAR_WIDTH;
 
@@ -49,20 +47,16 @@ const Sidebar: React.FC = () => {
     dispatch(setActiveTab(newValue));
   };
 
-  const [lastTouchY, setLastTouchY] = useState(0);
-
   const handleDragStart = (e: React.TouchEvent) => {
     if (!isOpen) return;
     setIsDragging(true);
     dragStartY.current = e.touches[0].clientY;
-    setLastTouchY(e.touches[0].clientY);
     startHeight.current = drawerHeight;
   };
 
   const handleDragMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
     const currentY = e.touches[0].clientY;
-    setLastTouchY(currentY);
     const deltaY = dragStartY.current - currentY;
     const newHeight = startHeight.current + (deltaY / window.innerHeight) * 100;
     const clampedHeight = Math.min(Math.max(newHeight, 20), 95);
@@ -90,7 +84,7 @@ const Sidebar: React.FC = () => {
   }, [isDragging]);
 
   const selectedModuleCode = searchParams.get("module");
-  const { module, isPlanned, isLoading, isFetching }  = useModuleState(selectedModuleCode);
+  const { mod, isPlanned, isLoading, isFetching }  = useModuleState(selectedModuleCode);
 
   return isMobile ? (
     <Box
@@ -239,7 +233,7 @@ const Sidebar: React.FC = () => {
                 <CircularProgress />
               </Box>
             )}
-            {module && isOpen && !(isLoading || isFetching) && <ModuleDetails module={module} isPlanned={isPlanned} />}
+            {mod && isOpen && !(isLoading || isFetching) && <ModuleDetails module={mod} isPlanned={isPlanned} />}
           </>
         )}
         {tabValue === 1 && (
@@ -357,7 +351,7 @@ const Sidebar: React.FC = () => {
                   <CircularProgress />
                 </Box>
               )}
-              {module && isOpen && selectedModuleCode && !(isLoading || isFetching) && <ModuleDetails module={module} isPlanned={isPlanned} />}
+              {mod && isOpen && selectedModuleCode && !(isLoading || isFetching) && <ModuleDetails module={mod} isPlanned={isPlanned} />}
             </>
           )}
           {tabValue === 1 && isOpen && (

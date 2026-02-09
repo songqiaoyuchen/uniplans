@@ -11,11 +11,11 @@ export const apiSlice = createApi({
     getModuleByCode: builder.query<ModuleData, string>({
       queryFn: async (code) => {
         try {
-          const module = await getModuleByCode(code.toUpperCase());
-          if (!module) {
+          const mod = await getModuleByCode(code.toUpperCase());
+          if (!mod) {
             return { error: { status: 404, data: { error: `Module ${code} not found` } } };
           }
-          return { data: module };
+          return { data: mod };
         } catch (err) {
           return { error: { status: 500, data: { error: 'Failed to fetch module' } } };
         }

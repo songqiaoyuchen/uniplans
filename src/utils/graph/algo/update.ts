@@ -1,5 +1,5 @@
 import { EdgeMap, NormalisedGraph, PlannerState } from '@/types/graphTypes';
-import { isModuleData, isNofNode } from './constants';
+import { isModuleData } from './constants';
 import { SemesterLabel } from '@/types/plannerTypes';
 
 /**
@@ -47,9 +47,9 @@ export function calculateAvailableModules(
     });
     
     const actualSem = semesterType === 0 ? SemesterLabel.First 
-            : semesterType === 1 ? SemesterLabel.SpecialTerm1
-            : semesterType === 2 ? SemesterLabel.Second
-            : SemesterLabel.SpecialTerm2;
+      : semesterType === 1 ? SemesterLabel.SpecialTerm1
+        : semesterType === 2 ? SemesterLabel.Second
+          : SemesterLabel.SpecialTerm2;
     const isOffered = node.semestersOffered.some((sem) => sem === actualSem);
 
     if (allPrereqsSatisfied && isOffered) {

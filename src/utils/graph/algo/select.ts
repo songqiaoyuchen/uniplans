@@ -4,7 +4,7 @@
  */
 
 import { EdgeMap, NormalisedGraph, PlannerState } from '@/types/graphTypes';
-import { isModuleData, isNofNode, MAX_MCS_PER_SEMESTER } from './constants';
+import { isModuleData, isNofNode } from './constants';
 
 /**
  * Selects modules for a single semester using greedy scoring.
@@ -246,8 +246,8 @@ function calculateValue(
       // If the parent is a Logic Node and it is already satisfied, 
       // adding more modules to it yields 0 marginal value.
       if (isNofNode(parentNode)) {
-         const status = plannerState.logicStatus[parentID];
-         if (status?.satisfied) continue;
+        const status = plannerState.logicStatus[parentID];
+        if (status?.satisfied) continue;
       }
 
       visited.add(parentID);
@@ -302,7 +302,7 @@ export function updateLogicSatisfaction(
       const grandparentLogics = edgeMap[logicId].in || [];
 
       for (const parentId of grandparentLogics) {
-          toCheck.add(parentId);
+        toCheck.add(parentId);
       }
     }
   }

@@ -9,9 +9,8 @@ import { selectModulesForSemester} from './select';
 import { calculateAvailableModules } from './update';
 import { MAX_SEMESTERS } from './constants';
 import { validateSchedule, generateValidationReport } from './check';
-import { isModuleData, isNofNode } from './constants';
+import { isModuleData } from './constants';
 import { cleanSemesters } from './clean';
-import { semesterRemoved } from '@/store/timetableSlice';
 
 /**
  * Runs the complete scheduling algorithm.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -29,7 +29,6 @@ import MiniModuleCard from "./timetable/MiniModuleCard";
 import { useSearchParams } from "next/navigation";
 import { importTimetableFromSnapshot } from "@/store/plannerSlice";
 import { TimetableSnapshot } from "@/types/plannerTypes";
-import router from "next/router";
 
 const PlannerContainer: React.FC = () => {
   const sensors = useSensors(
@@ -40,7 +39,7 @@ const PlannerContainer: React.FC = () => {
 
   // drag overlay states
   const [draggingModuleCode, setDraggingModuleCode] = useState<string | null>(null);
-  const { module: draggingModule, isPlanned } = useModuleState(draggingModuleCode);
+  const { mod: draggingModule, isPlanned } = useModuleState(draggingModuleCode);
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
 
   const dispatch = useAppDispatch();
@@ -49,35 +48,35 @@ const PlannerContainer: React.FC = () => {
 
   // helper to ensure an import name doesn't collide with existing ones
   const existingTimetableNames = useAppSelector((s) => s.planner.timetables.ids);
-  const uniqueImportName = (base: string) => {
+  const uniqueImportName = useCallback((base: string) => {
     if (!existingTimetableNames.includes(base)) return base;
     let i = 2;
     while (existingTimetableNames.includes(`${base} ${i}`)) i++;
     return `${base} ${i}`;
-  };
+  }, [existingTimetableNames]);
 
   useEffect(() => {
-      if (!snapshotId) return;
+    if (!snapshotId) return;
 
-      (async () => {
-        try {
-          const res = await fetch(`/api/snapshot/${snapshotId}`);
-          if (!res.ok) throw new Error("Snapshot not found");
+    (async () => {
+      try {
+        const res = await fetch(`/api/snapshot/${snapshotId}`);
+        if (!res.ok) throw new Error("Snapshot not found");
 
-          const snapshot: TimetableSnapshot = await res.json();
-          const name = uniqueImportName(`Imported Timetable`);
-          // await so we only remove the id parameter after import completes
-          await dispatch(importTimetableFromSnapshot(snapshot, name));
+        const snapshot: TimetableSnapshot = await res.json();
+        const name = uniqueImportName(`Imported Timetable`);
+        // await so we only remove the id parameter after import completes
+        await dispatch(importTimetableFromSnapshot(snapshot, name));
 
-          // remove ?id= from URL without navigation
-          const url = new URL(window.location.href);
-          url.searchParams.delete("id");
-          window.history.replaceState({}, "", url.toString());
-        } catch (err) {
-          console.error(err);
-        }
-      })();
-    }, [dispatch, snapshotId]);
+        // remove ?id= from URL without navigation
+        const url = new URL(window.location.href);
+        url.searchParams.delete("id");
+        window.history.replaceState({}, "", url.toString());
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [dispatch, snapshotId, uniqueImportName]);
   
   const handleDragStart = (event: DragStartEvent) => {
     setDraggingModuleCode(event.active.id.toString().split('-')[0]);

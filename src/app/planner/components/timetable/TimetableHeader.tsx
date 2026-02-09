@@ -1,6 +1,5 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -17,7 +16,6 @@ import ViewCompactIcon from '@mui/icons-material/ViewCompact';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from "@mui/material/styles";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import EditIcon from "@mui/icons-material/Edit";
 import { toggleSidebar } from "@/store/sidebarSlice";
 import CheckIcon from "@mui/icons-material/Check";
@@ -37,7 +35,6 @@ const TimetableHeader: React.FC = () => {
   const dispatch = useDispatch();
 
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
-  const useSpecialTerms = useAppSelector((state) => state.timetable.useSpecialTerms);
   const sidebarIsOpen = useAppSelector((state) => state.sidebar.isOpen);
 
   // active timetable name from plannerSlice
@@ -56,7 +53,6 @@ const TimetableHeader: React.FC = () => {
   const estimatedTrackDuration = latestNormalSemester / 4 + 0.5;
 
   const theme = useTheme();
-  const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
   const [statsAnchor, setStatsAnchor] = useState<HTMLElement | null>(null);
   const openStats = Boolean(statsAnchor);

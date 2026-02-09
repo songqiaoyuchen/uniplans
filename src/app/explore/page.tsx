@@ -30,10 +30,10 @@ export default function GraphPage() {
   // Create a stable "signature" of all modules in timetable to auto-refresh
   const moduleSignature = activeTimetable
     ? Object.values(activeTimetable.modules.entities)
-        .filter(Boolean)
-        .map((m: any) => `${m.code}:${m.status || ""}`)
-        .sort()
-        .join(",")
+      .filter(Boolean)
+      .map((m: any) => `${m.code}:${m.status || ""}`)
+      .sort()
+      .join(",")
     : "";
 
   useEffect(() => {

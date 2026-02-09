@@ -24,8 +24,8 @@ export async function fetchPrereqInfo(): Promise<Prerequisite> {
 
   const results: Prerequisite = {};
 
-  for (const module of moduleData) {
-    const code = module.moduleCode;
+  for (const mod of moduleData) {
+    const code = mod.moduleCode;
     try {
       const res = await axios.get(`${API_URL}${code}.json`);
       const tree = res.data.prereqTree;

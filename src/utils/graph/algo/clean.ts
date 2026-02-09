@@ -51,7 +51,7 @@ export function cleanSemesters(
         // If it's not a module (i.e., it's a LogicNode), we must recurse immediately
         // to find the underlying modules that satisfy it.
         if (node && !isModuleData(node)) {
-           addPrerequisites(prereqId);
+          addPrerequisites(prereqId);
         }
       }
     }

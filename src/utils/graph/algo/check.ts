@@ -5,7 +5,7 @@
  * credit limits, and target module completion.
  **/
 
-import { NormalisedGraph, TimetableData, Semester, ValidationResult, PlannerState } from '@/types/graphTypes';
+import { NormalisedGraph, TimetableData, ValidationResult } from '@/types/graphTypes';
 import { isNofNode, isModuleData, MAX_MCS_PER_SEMESTER } from './constants';
 
 /**

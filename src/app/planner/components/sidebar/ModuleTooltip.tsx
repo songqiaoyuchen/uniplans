@@ -41,22 +41,22 @@ const ModuleTooltip: React.FC<ModuleTooltipProps> = ({ module, isPlanned }) => {
     >
       <Tooltip title={`${module.code}: ${module.title}`} arrow placement="right"
         slotProps={{
-            popper: {
-              modifiers: [
-                {
-                  name: 'customStyle',
-                  enabled: true,
-                  phase: 'beforeWrite',
-                  fn: ({ state }) => {
-                    Object.assign(state.elements.popper.style, {
-                      userSelect: 'none',
-                      cursor: 'default',
-                    });
-                  },
+          popper: {
+            modifiers: [
+              {
+                name: 'customStyle',
+                enabled: true,
+                phase: 'beforeWrite',
+                fn: ({ state }) => {
+                  Object.assign(state.elements.popper.style, {
+                    userSelect: 'none',
+                    cursor: 'default',
+                  });
                 },
-              ],
-            },
-      }}>
+              },
+            ],
+          },
+        }}>
         <Typography variant="body2" fontWeight='bold'>
           {module.code}
         </Typography>

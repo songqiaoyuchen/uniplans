@@ -13,11 +13,7 @@ interface ExemptedButtonProps {
   fullWidth?: boolean;
 }
 
-const ExemptedButton: React.FC<ExemptedButtonProps> = ({ 
-  moduleCode, 
-  size = "small",
-  fullWidth = false 
-}) => {
+const ExemptedButton: React.FC<ExemptedButtonProps> = ({ moduleCode }) => {
   const dispatch = useAppDispatch();
   
   const targetModuleCodes = useAppSelector((state: RootState) => {

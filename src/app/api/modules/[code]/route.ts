@@ -17,8 +17,8 @@ export async function GET(
   }
 
   try {
-    const module = await getModuleByCode(moduleCode);
-    if (!module) {
+    const mod = await getModuleByCode(moduleCode);
+    if (!mod) {
       return NextResponse.json(
         { error: `Module with code ${moduleCode} not found` },
         { status: 404 }
@@ -27,9 +27,9 @@ export async function GET(
 
     const requires = await getModuleRequires(moduleCode);
     if (requires) {
-      module.requires = requires;
+      mod.requires = requires;
     }
-    return NextResponse.json(module, { status: 200 });
+    return NextResponse.json(mod, { status: 200 });
   } catch (err) {
     console.error('getModule error:', err);
     return NextResponse.json(

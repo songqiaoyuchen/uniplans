@@ -25,8 +25,8 @@ export default function RootLayout({
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
               <Navbar />
               <Toolbar />
-                {children}
-                <Analytics />
+              {children}
+              <Analytics />
             </Box>
           </Providers>
         </AppRouterCacheProvider>

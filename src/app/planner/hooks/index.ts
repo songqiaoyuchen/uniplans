@@ -47,7 +47,7 @@ export const useModuleState = (moduleCode: string | null) => {
   const isRelated = useAppSelector(isModuleRelatedSelector);
 
   // 4. Compose final module
-  const module = useMemo<ModuleData | null>(() => {
+  const mod = useMemo<ModuleData | null>(() => {
     if (existingModule) return existingModule;
     if (!staticData) return null;
     if (!moduleState) return staticData;
@@ -60,7 +60,7 @@ export const useModuleState = (moduleCode: string | null) => {
   }, [existingModule, staticData, moduleState]);
 
   return {
-    module,
+    mod,
     isLoading: !existingModule && isLoading,
     isFetching: !existingModule && isFetching,
     isError,

@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getMergedTree } from "@/db/getMergedTree";
 import { ErrorResponse } from "@/types/errorTypes";
-import { pruneGraph } from "@/utils/graph/pruneGraph";
 import { normaliseNodes } from "@/utils/graph/normaliseNodes";
 import { NormalisedGraph } from "@/types/graphTypes";
 import { checkGraph } from "@/utils/graph/checkGraph";

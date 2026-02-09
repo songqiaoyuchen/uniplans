@@ -35,9 +35,6 @@ function Navbar() {
     setMobileNavOpen(open);
   };
 
-  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorElUser(event.currentTarget);
-  };
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
