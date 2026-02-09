@@ -1,16 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getNeo4jDriver } from '@/db/neo4j';
+import { supabaseServer } from '@/services/supabase';
 
-export async function GET(request: NextRequest) {
+async function keepNeo4jAlive() {
+  const driver = getNeo4jDriver();
+  const session = driver.session();
+
   try {
-    const driver = getNeo4jDriver();
-    const session = driver.session();
-
-    // Simple query to keep the connection alive
+    // Simple query to keep Neo4j connection alive
     const result = await session.run('MATCH (m:Module) RETURN COUNT(m) as moduleCount');
-    const moduleCount = result.records[0]?.get('moduleCount').toNumber() || 0;
-
+    return result.records[0]?.get('moduleCount').toNumber() || 0;
+  } finally {
     await session.close();
+  }
+}
+
+async function keepSupabaseAlive() {
+  // Simple query to keep Supabase connection alive
+  const { error } = await supabaseServer
+    .from('timetable_snapshots')
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function GET() {
+  try {
+    const [moduleCount] = await Promise.all([
+      keepNeo4jAlive(),
+      keepSupabaseAlive(),
+    ]);
 
     return NextResponse.json({
       status: 'ok',
