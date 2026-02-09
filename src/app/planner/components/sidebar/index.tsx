@@ -49,13 +49,18 @@ const Sidebar: React.FC = () => {
 
   const handleDragStart = (e: React.TouchEvent) => {
     if (!isOpen) return;
+    e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
     dragStartY.current = e.touches[0].clientY;
     startHeight.current = drawerHeight;
   };
 
-  const handleDragMove = (e: React.TouchEvent) => {
+  const handleDragMove = (e: React.TouchEvent | TouchEvent) => {
     if (!isDragging) return;
+    if ("preventDefault" in e && e.cancelable) {
+      e.preventDefault();
+    }
     const currentY = e.touches[0].clientY;
     const deltaY = dragStartY.current - currentY;
     const newHeight = startHeight.current + (deltaY / window.innerHeight) * 100;
@@ -74,7 +79,7 @@ const Sidebar: React.FC = () => {
 
   useEffect(() => {
     if (isDragging) {
-      window.addEventListener("touchmove", handleDragMove as any);
+      window.addEventListener("touchmove", handleDragMove as any, { passive: false });
       window.addEventListener("touchend", handleDragEnd);
       return () => {
         window.removeEventListener("touchmove", handleDragMove as any);
@@ -106,6 +111,7 @@ const Sidebar: React.FC = () => {
         zIndex: 1200,
         display: "flex",
         flexDirection: "column",
+        touchAction: "none",
       }}
       onTouchStart={handleDragStart}
       onTouchMove={handleDragMove}
