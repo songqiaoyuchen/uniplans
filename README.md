@@ -1,5 +1,7 @@
 # UniPlans
 
+![UniPlans preview](public/assets/uniplans.webp)
+
 A modern university course planning application built with Next.js, React, and Neo4j. UniPlans helps students visualize course prerequisites, dependencies, and plan their academic journey with an interactive graph-based interface.
 
 ## Getting Started
