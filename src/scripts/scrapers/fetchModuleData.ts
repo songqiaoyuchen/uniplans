@@ -2,7 +2,7 @@ import axios from "axios";
 import { Neo4jModuleData, Neo4jMiniModuleData } from "@/types/neo4jTypes";
 import { MiniModuleData } from "@/types/plannerTypes";
 
-const academicYear = "2025-2026";
+const academicYear = "2026-2027";
 const API_URL = `https://api.nusmods.com/v2/${academicYear}/`;
 
 export async function fetchModuleData(): Promise<{
