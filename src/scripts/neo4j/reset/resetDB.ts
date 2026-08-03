@@ -2,6 +2,7 @@ import { uploadModules } from "./uploadModules";
 import { deduplicateLogicNodes } from "./deduplicateLogicNodes";
 import { deleteGraph } from "./deleteGraph";
 import { deleteYSCModules } from "./deleteYSCModules";
+import { downloadData } from "./downloadData";
 import { uploadAllPrereqTrees } from "./uploadPrerequisites";
 import { getNeo4jDriver } from "../../../db/neo4j";
 import { closeNeo4jDriver } from "../../../db/neo4j";
@@ -14,7 +15,7 @@ async function resetDB(): Promise<void> {
   try {
     await deleteGraph(session);
     // Uncomment the following line to download the latest NUSMods data (Don't spam it!)
-    // await downloadData();
+    await downloadData();
     await uploadModules(session);
     await uploadAllPrereqTrees(session);
     await deduplicateLogicNodes(session);

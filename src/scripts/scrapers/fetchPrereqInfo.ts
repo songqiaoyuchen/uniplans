@@ -9,7 +9,7 @@ import fs from "fs/promises";
 import path from "path";
 import { Prerequisite, Neo4jModuleData } from "@/types/neo4jTypes";
 
-const academicYear = "2025-2026";
+const academicYear = "2026-2027";
 const API_URL = `https://api.nusmods.com/v2/${academicYear}/modules/`;
 
 export async function fetchPrereqInfo(): Promise<Prerequisite> {
