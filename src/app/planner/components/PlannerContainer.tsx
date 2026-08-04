@@ -19,6 +19,7 @@ import {
 
 import Sidebar from "./sidebar";
 import Box from "@mui/material/Box";
+import { useTheme } from "@mui/material/styles";
 import Timetable from "./timetable";
 import ModuleCard from "./timetable/ModuleCard";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -41,6 +42,7 @@ const PlannerContainer: React.FC = () => {
   const [draggingModuleCode, setDraggingModuleCode] = useState<string | null>(null);
   const { mod: draggingModule, isPlanned } = useModuleState(draggingModuleCode);
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
+  const theme = useTheme();
 
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
@@ -157,6 +159,10 @@ const PlannerContainer: React.FC = () => {
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
+        autoScroll={{
+          canScroll: (element) =>
+            !element.hasAttribute("data-dnd-no-autoscroll"),
+        }}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -166,7 +172,7 @@ const PlannerContainer: React.FC = () => {
 
         {/* overlay modulecard */}
         {createPortal(
-          <DragOverlay>
+          <DragOverlay zIndex={theme.zIndex.drawer + 1}>
             {draggingModuleCode && draggingModule && (
               isMinimalView 
                 ? <MiniModuleCard module={draggingModule} isDragging/>

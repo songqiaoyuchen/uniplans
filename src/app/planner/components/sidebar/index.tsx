@@ -18,7 +18,7 @@ import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import Generate from "./Generate";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 // Define tab configuration
 const tabs = [
@@ -41,53 +41,60 @@ const Sidebar: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
   const startHeight = useRef(0);
+  const currentDrawerHeight = useRef(drawerHeight);
+  const resizePointerId = useRef<number | null>(null);
 
   const handleToggle = () => dispatch(toggleSidebar());
   const handleTabChange = (newValue: number) => {
     dispatch(setActiveTab(newValue));
   };
 
-  const handleDragStart = (e: React.TouchEvent) => {
+  const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isOpen) return;
+
+    resizePointerId.current = e.pointerId;
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
-    dragStartY.current = e.touches[0].clientY;
+    dragStartY.current = e.clientY;
     startHeight.current = drawerHeight;
+    currentDrawerHeight.current = drawerHeight;
   };
 
-  const handleDragMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = dragStartY.current - currentY;
+  const handleResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (resizePointerId.current !== e.pointerId) return;
+
+    const deltaY = dragStartY.current - e.clientY;
     const newHeight = startHeight.current + (deltaY / window.innerHeight) * 100;
     const clampedHeight = Math.min(Math.max(newHeight, 20), 95);
+
+    currentDrawerHeight.current = clampedHeight;
     setDrawerHeight(clampedHeight);
   };
 
-  const handleDragEnd = () => {
+  const handleResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (resizePointerId.current !== e.pointerId) return;
+
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+
+    resizePointerId.current = null;
     setIsDragging(false);
+
     // Auto-close if dragged below 35% of screen height
-    if (drawerHeight < 35) {
+    if (currentDrawerHeight.current < 35) {
       dispatch(toggleSidebar());
+      currentDrawerHeight.current = 40;
       setDrawerHeight(40); // Reset to default height
     }
   };
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("touchmove", handleDragMove as any);
-      window.addEventListener("touchend", handleDragEnd);
-      return () => {
-        window.removeEventListener("touchmove", handleDragMove as any);
-        window.removeEventListener("touchend", handleDragEnd);
-      };
-    }
-  }, [isDragging]);
 
   const selectedModuleCode = searchParams.get("module");
   const { mod, isPlanned, isLoading, isFetching }  = useModuleState(selectedModuleCode);
 
   return isMobile ? (
     <Box
+      data-dnd-no-autoscroll
       sx={{
         position: "fixed",
         bottom: isOpen ? 0 : `calc(-${drawerHeight}vh)`,
@@ -102,14 +109,13 @@ const Sidebar: React.FC = () => {
         borderTopRightRadius: 16,
         boxShadow: 4,
         overflowY: "auto",
+        overscrollBehavior: "contain",
+        touchAction: "pan-y",
         transition: isDragging ? "none" : "bottom 0.3s, height 0.3s",
         zIndex: 1200,
         display: "flex",
         flexDirection: "column",
       }}
-      onTouchStart={handleDragStart}
-      onTouchMove={handleDragMove}
-      onTouchEnd={handleDragEnd}
     >
       {/* Rounded top bar handle */}
       <Box
@@ -122,16 +128,21 @@ const Sidebar: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           height: 24,
+          flexShrink: 0,
           backgroundColor: "background.default",
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           cursor: "grab",
           touchAction: "none",
+          zIndex: 1,
           "&:active": {
             cursor: "grabbing",
           },
         }}
-        onTouchStart={handleDragStart}
+        onPointerDown={handleResizeStart}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeEnd}
+        onPointerCancel={handleResizeEnd}
       >
         <Box
           sx={{
