@@ -107,11 +107,19 @@ const PlannerContainer: React.FC = () => {
     }
   };
 
+  const clearDragState = () => {
+    setDraggingModuleCode(null);
+    dispatch(semesterDraggedOverCleared());
+  };
+
+  const handleDragCancel = () => {
+    clearDragState();
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    setDraggingModuleCode(null);
-    dispatch(semesterDraggedOverCleared());
+    clearDragState();
 
     if (!over || active.id === over.id) return;
 
@@ -173,6 +181,7 @@ const PlannerContainer: React.FC = () => {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <Sidebar />  
         <Timetable />
