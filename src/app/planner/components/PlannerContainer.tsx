@@ -19,6 +19,7 @@ import {
 
 import Sidebar from "./sidebar";
 import Box from "@mui/material/Box";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import Timetable from "./timetable";
 import ModuleCard from "./timetable/ModuleCard";
@@ -30,6 +31,7 @@ import MiniModuleCard from "./timetable/MiniModuleCard";
 import { useSearchParams } from "next/navigation";
 import { importTimetableFromSnapshot } from "@/store/plannerSlice";
 import { TimetableSnapshot } from "@/types/plannerTypes";
+import { closeSidebar } from "@/store/sidebarSlice";
 
 const PlannerContainer: React.FC = () => {
   const sensors = useSensors(
@@ -43,6 +45,7 @@ const PlannerContainer: React.FC = () => {
   const { mod: draggingModule, isPlanned } = useModuleState(draggingModuleCode);
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
@@ -82,6 +85,10 @@ const PlannerContainer: React.FC = () => {
   
   const handleDragStart = (event: DragStartEvent) => {
     setDraggingModuleCode(event.active.id.toString().split('-')[0]);
+
+    if (isMobile && event.active.data.current?.source === "sidebar") {
+      dispatch(closeSidebar());
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {

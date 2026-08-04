@@ -20,6 +20,7 @@ const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
     disabled: isPlanned,
     data: {
       type: 'module',
+      source: 'sidebar',
       dragActivationConstraint: {
         distance: 5,
       },

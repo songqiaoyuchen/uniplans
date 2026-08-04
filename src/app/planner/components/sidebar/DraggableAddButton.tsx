@@ -13,7 +13,7 @@ interface DraggableAddButtonProps {
 const DraggableAddButton: React.FC<DraggableAddButtonProps> = ({ moduleCode }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `${moduleCode}-sidebar`,
-    data: { type: "module", code: moduleCode },
+    data: { type: "module", code: moduleCode, source: "sidebar" },
   });
 
   return (
