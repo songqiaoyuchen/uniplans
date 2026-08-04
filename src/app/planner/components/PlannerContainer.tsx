@@ -32,6 +32,7 @@ import { useSearchParams } from "next/navigation";
 import { importTimetableFromSnapshot } from "@/store/plannerSlice";
 import { TimetableSnapshot } from "@/types/plannerTypes";
 import { closeSidebar } from "@/store/sidebarSlice";
+import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
 
 const PlannerContainer: React.FC = () => {
   const sensors = useSensors(
@@ -53,12 +54,10 @@ const PlannerContainer: React.FC = () => {
 
   // helper to ensure an import name doesn't collide with existing ones
   const existingTimetableNames = useAppSelector((s) => s.planner.timetables.ids);
-  const uniqueImportName = useCallback((base: string) => {
-    if (!existingTimetableNames.includes(base)) return base;
-    let i = 2;
-    while (existingTimetableNames.includes(`${base} ${i}`)) i++;
-    return `${base} ${i}`;
-  }, [existingTimetableNames]);
+  const uniqueImportName = useCallback(
+    (base: string) => uniqueTimetableName(base, existingTimetableNames as string[]),
+    [existingTimetableNames],
+  );
 
   useEffect(() => {
     if (!snapshotId) return;

@@ -2,6 +2,7 @@ import { createSlice, createEntityAdapter, PayloadAction, EntityState, createAsy
 import { modulesAdapter, semestersAdapter, timetableLoaded, updateModuleStates, type Semester } from "./timetableSlice";
 import { ModuleData, TimetableSnapshot } from "@/types/plannerTypes";
 import { AppDispatch, RootState } from ".";
+import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
 
 export interface Timetable {
   name: string;
@@ -62,15 +63,25 @@ export const plannerSlice = createSlice({
       state,
       action: PayloadAction<{ oldName: string; newName: string }>
     ) => {
-      const timetable = state.timetables.entities[action.payload.oldName];
+      const { oldName, newName } = action.payload;
+      if (oldName === newName) return;
+
+      const timetable = state.timetables.entities[oldName];
       if (timetable) {
-        timetableAdapter.removeOne(state.timetables, action.payload.oldName);
+        const uniqueName = uniqueTimetableName(
+          newName,
+          state.timetables.ids as string[],
+          oldName,
+        );
+        if (uniqueName === oldName) return;
+
+        timetableAdapter.removeOne(state.timetables, oldName);
         timetableAdapter.addOne(state.timetables, {
           ...timetable,
-          name: action.payload.newName,
+          name: uniqueName,
         });
-        if (state.activeTimetableName === action.payload.oldName) {
-          state.activeTimetableName = action.payload.newName;
+        if (state.activeTimetableName === oldName) {
+          state.activeTimetableName = uniqueName;
         }
       }
     },
