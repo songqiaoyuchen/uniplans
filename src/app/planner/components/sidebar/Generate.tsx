@@ -29,7 +29,7 @@ import {
   semestersAdapter
 } from '@/store/timetableSlice';
 import MiniModuleCard from '../timetable/MiniModuleCard';
-import { ModuleStatus } from '@/types/plannerTypes';
+import { mapModuleCodesForDisplay } from '@/utils/planner/mapModuleCodesForDisplay';
 
 const Generate: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -76,29 +76,11 @@ const Generate: React.FC = () => {
 
   // Create module objects from codes
   const targetModules = useMemo(() => {
-    return targetModuleCodes
-      .map(code => {
-        const moduleData = miniModuleData.find(m => m.code === code);
-        return moduleData ? {
-          code: moduleData.code,
-          title: moduleData.title,
-          status: ModuleStatus.Satisfied
-        } : null;
-      })
-      .filter(Boolean) as Array<{ code: string; title: string; status: ModuleStatus }>;
+    return mapModuleCodesForDisplay(targetModuleCodes, miniModuleData);
   }, [targetModuleCodes]);
 
   const exemptedModules = useMemo(() => {
-    return exemptedModuleCodes
-      .map(code => {
-        const moduleData = miniModuleData.find(m => m.code === code);
-        return moduleData ? {
-          code: moduleData.code,
-          title: moduleData.title,
-          status: ModuleStatus.Satisfied
-        } : null;
-      })
-      .filter(Boolean) as Array<{ code: string; title: string; status: ModuleStatus }>;
+    return mapModuleCodesForDisplay(exemptedModuleCodes, miniModuleData);
   }, [exemptedModuleCodes]);
 
   const handleDeleteTarget = (moduleCode: string) => {
