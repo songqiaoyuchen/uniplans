@@ -108,7 +108,7 @@ const addTimetableListeners = (startAppListening: AppStartListening) => {
     effect: async (action, api) => {
       api.cancelActiveListeners();
       // Extract module codes from the fetched timetable
-      const semesters = action.payload.semesters;
+      const semesters = action.payload.timetable.semesters;
       const uniqueModuleCodes = [
         ...new Set(semesters.flatMap((s) => s.moduleCodes)),
       ];

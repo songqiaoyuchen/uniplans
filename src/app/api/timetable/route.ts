@@ -3,9 +3,9 @@ import { getMergedTree } from '@/db/getMergedTree';
 import { normaliseNodes } from '@/utils/graph/normaliseNodes';
 import { runScheduler } from '@/utils/graph/algo/schedule';
 import { ErrorResponse } from '@/types/errorTypes';
-import { TimetableData } from '@/types/graphTypes';
+import { TimetableGenerationResult } from '@/types/graphTypes';
 
-export async function POST(request: NextRequest): Promise<NextResponse<TimetableData | ErrorResponse>> {
+export async function POST(request: NextRequest): Promise<NextResponse<TimetableGenerationResult | ErrorResponse>> {
   try {
     const body = await request.json();
     const { 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
     const normalisedGraph = normaliseNodes(rawGraph);
 
     // Run the scheduler
-    const timetable = runScheduler(
+    const result = runScheduler(
       normalisedGraph,
       requiredModuleCodes,
       exemptedModuleCodes,
@@ -45,9 +45,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
       preservedTimetable
     );
 
-    console.log('✅ Timetable generated:', timetable);
-
-    return NextResponse.json(timetable);
+    if (result.isValid) {
+      console.log('Timetable generated and validated');
+    } else {
+      console.warn('Scheduler returned an invalid proposal', {
+        validationErrors: result.validation.errors.length,
+      });
+    }
+    return NextResponse.json(result);
   } catch (error) {
     console.error('❌ Failed to generate timetable:', error);
     return NextResponse.json(

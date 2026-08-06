@@ -116,8 +116,14 @@ const Generate: React.FC = () => {
     }
     
     if (isSuccess && data) {
-      const semesterCount = data.semesters?.length || 0;
-      if (semesterCount === 0) {
+      const semesterCount = data.timetable.semesters.length;
+      if (!data.isValid) {
+        setSnackbar({
+          open: true,
+          message: 'Generation error: the proposed timetable is invalid. Review it before using.',
+          severity: 'warning'
+        });
+      } else if (semesterCount === 0) {
         setSnackbar({
           open: true,
           message: 'No valid timetable could be generated.',
@@ -396,7 +402,7 @@ const Generate: React.FC = () => {
         {/* Snackbar for generation feedback */}
         <Snackbar
           open={snackbar.open}
-          autoHideDuration={1500}
+          autoHideDuration={data && !data.isValid ? 6000 : 2000}
           onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
@@ -429,6 +435,13 @@ const Generate: React.FC = () => {
           {isFetching ? 'Generating...' : 'Generate Timetable'}
         </Button>
         
+        {data && !data.isValid ? (
+          <Alert severity="warning" variant="outlined" sx={{ mt: 1 }}>
+            Generation error: this proposed timetable failed validation and may
+            violate prerequisites or scheduling constraints.
+          </Alert>
+        ) : null}
+
         {error ? (
           <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
             Error generating timetable. Please try again.

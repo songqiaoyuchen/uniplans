@@ -308,7 +308,7 @@ const timetableSlice = createSlice({
       (state, action) => {
         // Ensure there are no gaps in EVEN semester IDs (main terms).
         // Odd semester IDs (special terms) are optional and only included if present.
-        const incoming = action.payload.semesters ?? [];
+        const incoming = action.payload.timetable.semesters ?? [];
         if (incoming.length > 0) {
           const presentById = new Map(incoming.map((s) => [s.id, s]));
 

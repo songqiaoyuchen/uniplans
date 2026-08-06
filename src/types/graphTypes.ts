@@ -84,4 +84,10 @@ export interface ValidationResult {
     targetModulesCompleted: number;
     targetModulesTotal: number;
   };
+
 }
+export type TimetableGenerationResult = {
+  timetable: TimetableData;
+  isValid: boolean;
+  validation: ValidationResult;
+};

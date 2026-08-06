@@ -3,7 +3,7 @@
  * Handles semester-by-semester planning with snapshot-based availability.
  */
 
-import { NormalisedGraph, Semester, TimetableData } from '@/types/graphTypes';
+import { NormalisedGraph, Semester, TimetableData, TimetableGenerationResult } from '@/types/graphTypes';
 import { initialise } from './initialise';
 import { selectModulesForSemester} from './select';
 import { calculateAvailableModules } from './update';
@@ -22,7 +22,7 @@ export function runScheduler(
   useSpecialTerms: boolean = true,
   maxMcsPerSemester: number = 20,
   preservedTimetable: Record<number, string[]> = {}
-): TimetableData {
+): TimetableGenerationResult {
   
   // Build a map from node id to its edges
   const edgeMap: Record<string, { out: string[]; in: string[] }> = {};
@@ -147,5 +147,9 @@ export function runScheduler(
   const report = generateValidationReport(validation, maxMcsPerSemester);
   console.log('Validation Report:', report);
 
-  return timetableData;
+  return {
+    timetable: timetableData,
+    isValid: validation.isValid,
+    validation,
+  };
 }

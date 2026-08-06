@@ -1,5 +1,6 @@
 // we keep ModuleData dynamic for now in case for DB updates
 // in the future this should really be static and maintained per semester / acamdeic year
+import { TimetableGenerationResult } from '@/types/graphTypes';
 import { ModuleData } from '@/types/plannerTypes';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { getModuleByCode } from '@/db/getModuleByCode';
@@ -23,7 +24,7 @@ export const apiSlice = createApi({
       keepUnusedDataFor: Number.MAX_VALUE,
     }),
 
-    getTimetable: builder.query<{ semesters: { id: number; moduleCodes: string[] }[] }, { requiredModuleCodes: string[]; exemptedModuleCodes: string[]; useSpecialTerms?: boolean; maxMcsPerSemester?: number; preserveTimetable?: boolean; preservedData?: Record<number, string[]> }> ({
+    getTimetable: builder.query<TimetableGenerationResult, { requiredModuleCodes: string[]; exemptedModuleCodes: string[]; useSpecialTerms?: boolean; maxMcsPerSemester?: number; preserveTimetable?: boolean; preservedData?: Record<number, string[]> }> ({
       query: (args) => ({
         url: '/api/timetable',
         method: 'POST',
