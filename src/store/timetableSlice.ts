@@ -59,6 +59,10 @@ const timetableSlice = createSlice({
     ) {
       modulesAdapter.setAll(state.modules, action.payload.modules);
       semestersAdapter.setAll(state.semesters, action.payload.semesters);
+      const scheduledCodes = new Set(action.payload.semesters.flatMap((semester) => semester.moduleCodes));
+      state.exemptedModules = [...new Set(state.exemptedModules)].filter(
+        (code) => !scheduledCodes.has(code)
+      );
     },
     
     // handles adding a module to the timeable
@@ -79,6 +83,7 @@ const timetableSlice = createSlice({
       const semester = state.semesters.entities[destSemesterId];
       if (semester && !semester.moduleCodes.includes(module.code)) { // defensive checks
         semester.moduleCodes.push(module.code);
+        state.exemptedModules = state.exemptedModules.filter(code => code !== module.code);
       }
     },
 
@@ -181,6 +186,7 @@ const timetableSlice = createSlice({
           : dst.moduleCodes.length;
 
       dst.moduleCodes.splice(insertIndex, 0, activeModuleCode);
+      state.exemptedModules = state.exemptedModules.filter(code => code !== activeModuleCode);
     },
 
     // for module removal
@@ -257,9 +263,20 @@ const timetableSlice = createSlice({
 
     // handles exempted modules
     exemptedModuleAdded: (state, action: PayloadAction<string>) => {
-      if (!state.exemptedModules.includes(action.payload)) {
-        state.exemptedModules.push(action.payload);
+      const moduleCode = action.payload;
+      if (!state.exemptedModules.includes(moduleCode)) {
+        state.exemptedModules.push(moduleCode);
       }
+
+      // Last explicit action wins: exemption removes every scheduled occurrence.
+      for (const semester of Object.values(state.semesters.entities)) {
+        semester.moduleCodes = semester.moduleCodes.filter(code => code !== moduleCode);
+      }
+
+      const emptySpecialTermIds = Object.values(state.semesters.entities)
+        .filter((semester) => semester.moduleCodes.length === 0 && semester.id % 2 === 1)
+        .map((semester) => semester.id);
+      semestersAdapter.removeMany(state.semesters, emptySpecialTermIds);
     },
     exemptedModuleRemoved: (state, action: PayloadAction<string>) => {
       state.exemptedModules = state.exemptedModules.filter(code => code !== action.payload);
@@ -349,6 +366,13 @@ const timetableSlice = createSlice({
           semestersAdapter.setAll(state.semesters, []);
         }
 
+        const incomingModuleCodes = new Set(
+          incoming.flatMap((semester) => semester.moduleCodes)
+        );
+        state.exemptedModules = [...new Set(state.exemptedModules)].filter(
+          (code) => !incomingModuleCodes.has(code)
+        );
+
         const generationArgs = action.meta.arg.originalArgs;
         if (!generationArgs) {
           modulesAdapter.removeAll(state.modules);
@@ -358,10 +382,6 @@ const timetableSlice = createSlice({
         const preservedModuleCodes = generationArgs.preserveTimetable
           ? new Set(Object.values(generationArgs.preservedData ?? {}).flat())
           : new Set<string>();
-        const incomingModuleCodes = new Set(
-          incoming.flatMap((semester) => semester.moduleCodes)
-        );
-
         // Generated timetables only contain module codes. Keep the existing
         // entities for explicitly preserved modules so dynamic metadata such as
         // grades and tags survives while the remaining modules are refetched.

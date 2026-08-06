@@ -47,17 +47,19 @@ export function runScheduler(
 
   // Convert target and completed modules from codes to IDs
   const targetIds = targetModules.map(code => codeToIdMap.get(code)).filter(Boolean) as string[];
-  const exemptedIds = exemptedModules.map(code => codeToIdMap.get(code)).filter(Boolean) as string[];
+  const exemptedIds = [...new Set(
+    exemptedModules.map(code => codeToIdMap.get(code)).filter(Boolean) as string[]
+  )];
 
   // Convert preserved modules to IDs
-  const preservedIds: string[] = [];
+  const preservedIds = new Set<string>();
   Object.values(preservedTimetable).flat().forEach(code => {
     // Try exact match first, then uppercase
     let id = codeToIdMap.get(code);
     if (!id) {
       id = codeToIdMap.get(code.toUpperCase());
     }
-    if (id) preservedIds.push(id);
+    if (id) preservedIds.add(id);
   });
 
   const missingTargets = targetModules.filter(code => !codeToIdMap.has(code));
@@ -67,7 +69,8 @@ export function runScheduler(
     
   // Initialize planner state
   // Treat preserved modules as exempted (already completed) for the purpose of state initialization
-  const plannerState = initialise(graph, edgeMap, [...exemptedIds, ...preservedIds]);
+  const completedBeforeScheduling = [...new Set([...exemptedIds, ...preservedIds])];
+  const plannerState = initialise(graph, edgeMap, completedBeforeScheduling);
 
   const targetSet = new Set(targetIds);
   
@@ -138,8 +141,14 @@ export function runScheduler(
   }
 
   // Ensure preserved modules are kept during cleanup
-  const cleanupTargets = new Set([...targetModules, ...Object.values(preservedTimetable).flat()]);
-  const cleanedSemesters = cleanSemesters(semesters, graph, cleanupTargets);
+  const preservedModules = new Set(Object.values(preservedTimetable).flat());
+  const cleanedSemesters = cleanSemesters(
+    semesters,
+    graph,
+    new Set(targetModules),
+    preservedModules,
+    new Set(exemptedModules),
+  );
 
   const timetableData: TimetableData = { semesters: cleanedSemesters };
 

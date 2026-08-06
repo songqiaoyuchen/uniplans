@@ -42,6 +42,7 @@ export type LogicStatus = {
   satisfied: boolean;
   requires: number;
   satisfiedCount: number;
+  satisfiedChildren: Set<string>;
 };
 
 export type PlannerState = {

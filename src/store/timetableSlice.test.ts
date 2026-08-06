@@ -1,7 +1,11 @@
 import type { TimetableGenerationResult } from "@/types/graphTypes";
-import reducer from "./timetableSlice";
 import { ModuleStatus, type ModuleData } from "@/types/plannerTypes";
-import { timetableLoaded } from "./timetableSlice";
+import reducer, {
+  exemptedModuleAdded,
+  moduleAdded,
+  semesterAdded,
+  timetableLoaded,
+} from "./timetableSlice";
 
 const moduleData = (
   code: string,
@@ -60,7 +64,6 @@ const fulfilledGeneration = (
     },
   },
 });
-
 describe("generated timetable results", () => {
   test("retains the proposed timetable when scheduler validation fails", () => {
     const payload: TimetableGenerationResult = {
@@ -154,5 +157,27 @@ describe("generated timetable results", () => {
     );
 
     expect(state.modules.entities.CS1010).toBeUndefined();
+  });
+});
+
+describe("timetable and exemption mutual exclusivity", () => {
+  test("exempting a scheduled module removes every timetable occurrence", () => {
+    let state = reducer(undefined, semesterAdded({ id: 0 }));
+    state = reducer(state, moduleAdded({ module: moduleData("CS1010"), destSemesterId: 0 }));
+
+    state = reducer(state, exemptedModuleAdded("CS1010"));
+
+    expect(state.exemptedModules).toEqual(["CS1010"]);
+    expect(state.semesters.entities[0]?.moduleCodes).toEqual([]);
+  });
+
+  test("explicitly adding an exempted module removes its exemption", () => {
+    let state = reducer(undefined, semesterAdded({ id: 0 }));
+    state = reducer(state, exemptedModuleAdded("CS1010"));
+
+    state = reducer(state, moduleAdded({ module: moduleData("CS1010"), destSemesterId: 0 }));
+
+    expect(state.exemptedModules).toEqual([]);
+    expect(state.semesters.entities[0]?.moduleCodes).toEqual(["CS1010"]);
   });
 });

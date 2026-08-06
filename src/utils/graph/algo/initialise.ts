@@ -12,10 +12,11 @@ export function initialise(
   edgeMap: EdgeMap,
   exemptedIds: string[]
 ): PlannerState {
+  const distinctExemptedIds = [...new Set(exemptedIds)];
   const availableModules = new Set<string>();
   // Exempted modules are effectively completed and satisfy prerequisites
-  const completedModules = new Set<string>(exemptedIds);
-  const redundantModules = new Set<string>(exemptedIds);
+  const completedModules = new Set<string>(distinctExemptedIds);
+  const redundantModules = new Set<string>(distinctExemptedIds);
 
   // Satisfaction status of logic nodes
   const logicStatus: Record<string, LogicStatus> = {};
@@ -25,7 +26,12 @@ export function initialise(
   for (const [id, node] of Object.entries(graph.nodes)) {
     if (isNofNode(node)) {
       const satisfied = node.n === 0;
-      logicStatus[id] = { satisfied, requires: node.n, satisfiedCount: 0 };
+      logicStatus[id] = {
+        satisfied,
+        requires: node.n,
+        satisfiedCount: 0,
+        satisfiedChildren: new Set<string>(),
+      };
       if (satisfied) satisfiedLogicNodes.add(id);
     }
   }
@@ -40,7 +46,7 @@ export function initialise(
 
   // Now propagate the effect of all exempted/preserved modules
   // This ensures that logic nodes (AND/OR) are correctly updated based on the history
-  for (const moduleId of exemptedIds) {
+  for (const moduleId of distinctExemptedIds) {
     updateLogicSatisfaction(moduleId, plannerState, edgeMap, graph);
   }
 
