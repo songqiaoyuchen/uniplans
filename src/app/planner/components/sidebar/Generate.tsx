@@ -31,6 +31,8 @@ import {
 import MiniModuleCard from '../timetable/MiniModuleCard';
 import { mapModuleCodesForDisplay } from '@/utils/planner/mapModuleCodesForDisplay';
 
+const { selectAll: selectAllSemesters } = semestersAdapter.getSelectors();
+
 const Generate: React.FC = () => {
   const dispatch = useAppDispatch();
   const [triggerGetTimetable, { isFetching, error, data, isSuccess }] = useLazyGetTimetableQuery();
@@ -65,7 +67,7 @@ const Generate: React.FC = () => {
     preserveSemesters 
   } = useSelector((state: RootState) => state.timetable);
 
-  const allSemesters = useSelector((state: RootState) => semestersAdapter.getSelectors().selectAll(state.timetable.semesters));
+  const allSemesters = useSelector((state: RootState) => selectAllSemesters(state.timetable.semesters));
   const maxSemesterId = useMemo(() => {
     if (!Array.isArray(allSemesters) || allSemesters.length === 0) return -1;
     return Math.max(...allSemesters.map(s => (s && typeof s.id === 'number') ? s.id : -1));
