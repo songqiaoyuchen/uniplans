@@ -349,7 +349,28 @@ const timetableSlice = createSlice({
           semestersAdapter.setAll(state.semesters, []);
         }
 
-        modulesAdapter.removeAll(state.modules); // clear stale modules
+        const generationArgs = action.meta.arg.originalArgs;
+        if (!generationArgs) {
+          modulesAdapter.removeAll(state.modules);
+          return;
+        }
+
+        const preservedModuleCodes = generationArgs.preserveTimetable
+          ? new Set(Object.values(generationArgs.preservedData ?? {}).flat())
+          : new Set<string>();
+        const incomingModuleCodes = new Set(
+          incoming.flatMap((semester) => semester.moduleCodes)
+        );
+
+        // Generated timetables only contain module codes. Keep the existing
+        // entities for explicitly preserved modules so dynamic metadata such as
+        // grades and tags survives while the remaining modules are refetched.
+        const moduleIdsToRemove = state.modules.ids.filter(
+          (moduleCode) =>
+            !preservedModuleCodes.has(moduleCode) ||
+            !incomingModuleCodes.has(moduleCode)
+        );
+        modulesAdapter.removeMany(state.modules, moduleIdsToRemove);
       }
     );
   }
