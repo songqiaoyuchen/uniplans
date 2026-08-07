@@ -1,20 +1,37 @@
 import { useDraggable } from "@dnd-kit/core";
-import { useModuleState } from "../../hooks";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ModuleTooltip from "./ModuleTooltip";
 import { moduleSelected } from "@/store/timetableSlice";
-import { useDispatch } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store";
 import ModuleTooltipPlaceholder from "@/components/placeholders/ModuleTooltipPlaceholder";
+import type { MiniModuleData } from "@/types/plannerTypes";
+import { makeIsModulePlannedSelector } from "@/store/timetableSelectors";
 
 interface SidebarModuleProps {
   moduleCode: string;
+  summary?: MiniModuleData;
+  isLoading: boolean;
+  isError: boolean;
 };
 
-const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
+const SidebarModule: React.FC<SidebarModuleProps> = ({
+  moduleCode,
+  summary,
+  isLoading,
+  isError,
+}) => {
   const router = useRouter();
-  const dispatch = useDispatch();
-  const { mod, isPlanned, isLoading, isError } = useModuleState(moduleCode);
+  const dispatch = useAppDispatch();
+  const existingModule = useAppSelector(
+    (state) => state.timetable.modules.entities[moduleCode],
+  );
+  const isPlannedSelector = useMemo(
+    () => makeIsModulePlannedSelector(moduleCode),
+    [moduleCode],
+  );
+  const isPlanned = useAppSelector(isPlannedSelector);
+  const mod = existingModule ?? summary;
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: moduleCode + '-sidebar',
     disabled: isPlanned,
@@ -32,10 +49,10 @@ const SidebarModule: React.FC<SidebarModuleProps> = ({ moduleCode }) => {
     dispatch(moduleSelected(moduleCode))
   }, [moduleCode, dispatch, router]);
 
-  if (isLoading) {
+  if (isLoading && !existingModule) {
     return <ModuleTooltipPlaceholder />
   }
-  if (isError || !mod) {
+  if ((isError && !existingModule) || !mod) {
     return (
       <div style={{ 
         padding: '4px 8px',

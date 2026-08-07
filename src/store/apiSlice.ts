@@ -1,26 +1,24 @@
-// we keep ModuleData dynamic for now in case for DB updates
-// in the future this should really be static and maintained per semester / acamdeic year
-import { TimetableGenerationResult } from '@/types/graphTypes';
-import { ModuleData } from '@/types/plannerTypes';
+import type { TimetableGenerationResult } from '@/types/graphTypes';
+import type { MiniModuleData, ModuleData } from '@/types/plannerTypes';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { getModuleByCode } from '@/db/getModuleByCode';
 
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '' }),
   endpoints: (builder) => ({
     getModuleByCode: builder.query<ModuleData, string>({
-      queryFn: async (code) => {
-        try {
-          const mod = await getModuleByCode(code.toUpperCase());
-          if (!mod) {
-            return { error: { status: 404, data: { error: `Module ${code} not found` } } };
-          }
-          return { data: mod };
-        } catch (err) {
-          return { error: { status: 500, data: { error: 'Failed to fetch module' } } };
-        }
-      },
+      // Keep the full catalogue behind a route handler. Importing the server
+      // lookup here would bundle moduleData.json into every planner client.
+      query: (code) => `/api/modules/${encodeURIComponent(code.toUpperCase())}`,
+      keepUnusedDataFor: Number.MAX_VALUE,
+    }),
+
+    getModuleSummaries: builder.query<MiniModuleData[], string[]>({
+      query: (codes) => ({
+        url: '/api/modules/summaries',
+        method: 'POST',
+        body: { codes },
+      }),
       keepUnusedDataFor: Number.MAX_VALUE,
     }),
 
@@ -40,4 +38,5 @@ export const apiSlice = createApi({
   }),
 });
 
+export const { useGetModuleSummariesQuery } = apiSlice;
 export const { useGetModuleByCodeQuery, useGetTimetableQuery, useLazyGetTimetableQuery  } = apiSlice;

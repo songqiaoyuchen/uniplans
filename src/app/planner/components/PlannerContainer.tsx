@@ -33,6 +33,7 @@ import { importTimetableFromSnapshot } from "@/store/plannerSlice";
 import { TimetableSnapshot } from "@/types/plannerTypes";
 import { closeSidebar } from "@/store/sidebarSlice";
 import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
+import { apiSlice } from "@/store/apiSlice";
 
 const PlannerContainer: React.FC = () => {
   const sensors = useSensors(
@@ -115,17 +116,17 @@ const PlannerContainer: React.FC = () => {
     clearDragState();
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     clearDragState();
 
     if (!over || active.id === over.id) return;
 
-    const [draggingModuleCode, source] = (active.id as string).split('-');
+    const [moduleCode, source] = (active.id as string).split('-');
 
     if (over?.id === "delete-zone") {
-      dispatch(moduleRemoved({ moduleCode: draggingModuleCode }));
+      dispatch(moduleRemoved({ moduleCode }));
       return;
     }
 
@@ -134,8 +135,22 @@ const PlannerContainer: React.FC = () => {
 
     // Sidebar drop
     if (source === "sidebar") {
-      if (typeof destSemesterId !== "number" || !draggingModule) return;
-      dispatch(moduleAdded({ module: draggingModule, destSemesterId }));
+      if (typeof destSemesterId !== "number") return;
+      let moduleData = draggingModule?.code === moduleCode ? draggingModule : null;
+
+      if (!moduleData) {
+        try {
+          moduleData = await dispatch(
+            apiSlice.endpoints.getModuleByCode.initiate(moduleCode, {
+              subscribe: false,
+            }),
+          ).unwrap();
+        } catch {
+          return;
+        }
+      }
+
+      dispatch(moduleAdded({ module: moduleData, destSemesterId }));
       return;
     }
 
@@ -151,14 +166,14 @@ const PlannerContainer: React.FC = () => {
       dispatch(
         moduleReordered({
           semesterId: sourceSemesterId,
-          activeModuleCode: draggingModuleCode,
+          activeModuleCode: moduleCode,
           overModuleCode,
         })
       );
     } else {
       dispatch(
         moduleMoved({
-          activeModuleCode: draggingModuleCode,
+          activeModuleCode: moduleCode,
           overModuleCode,
           sourceSemesterId,
           destSemesterId,
