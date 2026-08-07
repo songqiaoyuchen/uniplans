@@ -1,186 +1,191 @@
 # UniPlans
 
-![UniPlans preview](public/assets/uniplans.webp)
+![UniPlans planner preview](public/assets/uniplans.webp)
 
-A modern university course planning application built with Next.js, React, and Neo4j. UniPlans helps students visualize course prerequisites, dependencies, and plan their academic journey with an interactive graph-based interface.
+UniPlans is an interactive academic planner for NUS modules. Start with the modules you want to complete, and UniPlans works backwards through their prerequisites to propose a semester-by-semester path. You can then adjust the result, track progress, compare multiple timetables, and share a plan.
 
-## Getting Started
+> UniPlans is a planning aid, not an official degree-audit or academic-advice system. Module information and generated plans may be incomplete or out of date. Always verify prerequisites, preclusions, availability, workload, and graduation requirements with official NUS sources.
+
+## Features
+
+### What you can do
+
+- Search the NUS module catalogue by code or title.
+- Mark modules as **targets** that you want the planner to work towards.
+- Mark completed or waived modules as **exempted** so they can satisfy prerequisites without being scheduled.
+- Generate a plan with configurable workload and optional special terms.
+- Preserve the first part of an existing timetable when regenerating the rest.
+- Drag modules between semesters and see prerequisite, availability, preclusion, and exam-clash issues.
+- Create, rename, duplicate, and switch between multiple timetables.
+- Record grades and tags, view workload and GPA summaries, and switch between detailed and compact views.
+- Share a timetable using a snapshot link or import a shared snapshot.
+- Explore the prerequisite graph for the active timetable.
+- Use the planner on desktop or mobile, in light or dark mode.
+
+### Plan a timetable
+
+1. Open **Planner** and use the search panel to find a module.
+2. Select the flag icon to make it a target. Use the blocked icon for a module you have already completed or do not need to schedule.
+3. Open the **Generate** tab, choose the maximum units per semester, and decide whether to include special terms.
+4. If you already have a partial plan, enable **Preserve Current Timetable** and choose how many early semesters to keep.
+5. Select **Generate Timetable**.
+6. Review any warnings, then drag modules to refine the proposed plan.
+
+Targets and exemptions are mutually exclusive: the most recent choice wins. The planner currently accepts up to 20 target modules and 50 exempted modules, with an even workload limit from 16 to 40 units per semester.
+
+### Saving and sharing
+
+Plans are saved in the current browser using local storage. Clearing site data or moving to another browser will remove local plans.
+
+The timetable menu lets you create or duplicate plans. **Share** creates a snapshot in Supabase and copies an import link to the clipboard. Shared snapshots contain the semester layout and module tags; grades are not included.
+
+## Tech Stack
+
+- Next.js 16 and React 19
+- TypeScript
+- Material UI and Emotion
+- Redux Toolkit, RTK Query, and Redux Persist
+- Neo4j for modules and prerequisite relationships
+- Supabase for shared timetable snapshots
+- Cytoscape.js for graph visualization
+- Jest and ts-jest for tests
+
+### Architecture
+
+```mermaid
+flowchart LR
+    Browser["Browser UI"] --> App["Next.js App Router"]
+    Browser --> State["Redux state + local storage"]
+    App --> API["Route handlers"]
+    API --> Neo4j["Neo4j module graph"]
+    API --> Supabase["Supabase snapshots"]
+    API --> Scheduler["Timetable scheduler + validator"]
+```
+
+The planner keeps its working state in Redux and persists it locally. Route handlers load module and graph data from Neo4j, run the scheduler on the server, and store or retrieve shareable snapshots from Supabase.
 
 ### Prerequisites
 
-- Node.js 18+
-- npm or yarn
-- Neo4j database (for backend queries)
-- Supabase account (for authentication and data storage)
+- Node.js 20.9 or newer
+- npm
+- A Neo4j database
+- A Supabase project
 
-### Installation
+### Local setup
 
-1. Clone the repository
-2. Install dependencies:
+1. Clone the repository and install dependencies:
+
    ```bash
+   git clone https://github.com/songqiaoyuchen/uniplans.git
+   cd uniplans
    npm install
    ```
 
-3. Set up environment variables (create `.env.local`):
+2. Create `.env.local` in the project root:
+
+   ```dotenv
+   DB_URI=neo4j+s://your-neo4j-host
+   DB_USER=neo4j
+   DB_PASSWORD=your-neo4j-password
+
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-supabase-publishable-key
+
+   # Required for the protected /api/keepAlive cron endpoint.
+   CRON_SECRET=use-a-long-random-value
    ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
-   NEO4J_URI=your_neo4j_uri
-   NEO4J_USERNAME=your_neo4j_username
-   NEO4J_PASSWORD=your_neo4j_password
+
+   These are server-side variable names; do not replace them with the older `NEXT_PUBLIC_*` names.
+
+3. Create the snapshot table in Supabase:
+
+   ```sql
+   create table if not exists timetable_snapshots (
+     id text primary key,
+     data jsonb not null,
+     created_at timestamptz not null default now()
+   );
    ```
 
-### Running the Development Server
+   The key and Row Level Security policy used by the app must permit the server to insert and read this table. Choose policies appropriate for your deployment before exposing it publicly.
+
+4. Populate Neo4j:
+
+   ```bash
+   npm run resetDB
+   ```
+
+   **Warning:** `resetDB` deletes the existing graph before rebuilding it and downloads module data from NUSMods. Use it only against the intended database, and do not repeatedly run the scraper.
+
+5. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000).
+
+### Verification
+
+Run the test suite, TypeScript check, and production build before opening a pull request:
 
 ```bash
-npm run dev
+npm exec -- jest --runInBand
+npm exec -- tsc --noEmit
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+### Package scripts
 
-## Project Structure
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server with Turbopack. |
+| `npm run build` | Create and validate a production build. |
+| `npm start` | Serve a completed production build. |
+| `npm run lint` | Run ESLint over the application source. |
+| `npm run resetDB` | Destructively rebuild the Neo4j module graph. |
 
-### `src/app/`
+### Timetable API guardrails
 
-Next.js App Router pages and layouts:
-- `page.tsx` — Home page
-- `layout.tsx` — Root layout wrapper
-- `api/` — Backend API routes
-  - `formattedGraph/` — Graph formatting endpoints
-  - `modules/` — Module information endpoints
-  - `normalisedGraph/` — Normalized graph endpoints
-  - `snapshot/` — Snapshot management endpoints
-  - `timetable/` — Timetable generation endpoints
-- `explore/` — Module exploration interface
-- `final-graph/` — Final course graph visualization
-- `formatted-graph/` — Formatted graph viewer
-- `normalised-graph/` — Normalized graph viewer
-- `planner/` — Main course planner interface
+`POST /api/timetable` validates and normalizes input before loading a graph or running the scheduler.
 
-### `src/components/`
+| Input | Accepted value |
+| --- | --- |
+| `required` | 1–20 known, unique module codes |
+| `exempted` | 0–50 known, unique module codes |
+| `specialTerms` | Boolean |
+| `maxMcs` | Even integer from 16 to 40 |
+| `preservedTimetable` | Semester IDs 0–20, with at most 50 modules per semester |
 
-Reusable React components:
-- `layout/` — Layout components (Navbar, etc.)
-- `placeholders/` — Loading placeholder components
-- `ui/` — Base UI components (ExpandableText, Tag, ThemeToggle, etc.)
+A module cannot be both targeted and exempted. Successful responses include the proposed timetable plus scheduler validation errors, warnings, and statistics; callers should check `isValid` before treating a proposal as valid.
 
-### `src/services/`
+### Project layout
 
-Client-side API service layer that communicates with backend endpoints:
-- `planner/` — Planner-related API calls (fetch graphs, modules, timetables)
-- `supabase.ts` — Supabase client configuration
-
-### `src/db/`
-
-Database connection and query layer:
-- `neo4j.ts` — Neo4j driver initialization
-- `getGraph.ts`, `getModuleByCode.ts`, `getModuleRequires.ts` — Query functions
-- `Queries.md` — Documentation of available Cypher queries
-
-### `src/scripts/`
-
-One-time or scheduled utility scripts:
-- `neo4j/` — Cypher queries for database operations
-- `scrapers/` — Data scrapers (fetches module data from external sources like NUSMods)
-
-### `src/utils/`
-
-Shared utility functions:
-- `graph/` — Graph transformation and manipulation utilities
-- `planner/` — Planner-specific helper functions
-
-### `src/store/`
-
-Redux state management:
-- `apiSlice.ts` — RTK Query API definitions
-- `plannerSlice.ts` — Planner state
-- `timetableSlice.ts` — Timetable state
-- `sidebarSlice.ts` — Sidebar UI state
-- `themeSlice.ts` — Theme state
-
-### `src/styles/`
-
-Global styling and theme configuration:
-- `globals.css` — Global CSS
-- `themes.ts` — MUI theme configuration
-- `mui.d.ts` — MUI type definitions
-
-### `src/types/`
-
-TypeScript type definitions:
-- `graphTypes.ts` — Graph-related types
-- `plannerTypes.ts` — Planner data types
-- `neo4jTypes.ts` — Neo4j query result types
-- `errorTypes.ts` — Error handling types
-
-### `src/data/`
-
-Static data files:
-- `moduleData.json` — Module information
-- `miniModuleData.json` — Compact module data
-- `modulePrereqInfo.json` — Prerequisite information
-- `sampleTimetable.json` — Sample timetable data
-
-### `src/constants/`
-
-Application constants and configuration values
-
-### `src/providers/`
-
-React context providers:
-- `ThemeProvider.tsx` — Theme context setup
-
-## Available Scripts
-
-```bash
-npm run dev       # Start development server with Turbopack
-npm run build     # Build for production
-npm start         # Start production server
-npm run lint      # Run ESLint
-npm run resetDB   # Reset Neo4j database
+```text
+src/
+├── app/                 Pages, planner UI, and route handlers
+├── components/          Shared layout and UI components
+├── constants/           Shared product and scheduler limits
+├── data/                Generated/static module datasets
+├── db/                  Neo4j connection and queries
+├── scripts/             Neo4j reset and NUSMods data scripts
+├── services/            Client and server service integrations
+├── store/               Redux slices, middleware, and selectors
+├── types/               Shared TypeScript types
+└── utils/
+    ├── graph/            Graph normalization, scheduling, and validation
+    └── planner/          Planner validation and display helpers
 ```
 
-## Database Setup
+The development-only graph inspection pages are `/formatted-graph`, `/normalised-graph`, and `/final-graph`. The user-facing dependency view is `/explore`.
 
-### Neo4j
+### Deployment notes
 
-The application uses Neo4j for storing course information and prerequisite relationships. Run the reset script to populate the database:
+- Add every environment variable listed above to the deployment environment.
+- `vercel.json` schedules `/api/keepAlive` once per day. The proxy rejects the request unless its `Authorization` header is `Bearer <CRON_SECRET>`.
+- Keep Neo4j credentials server-side and configure production Supabase access policies deliberately.
+- Run `npm run build` with production environment variables before deployment.
 
-```bash
-npm run resetDB
-```
+## Data and responsible use
 
-This will execute scripts in `src/scripts/neo4j/reset/` to initialize the graph database.
-
-> **Warning**: This command scrapes NUSMods to collect course information. Do not abuse this script as it may violate NUSMods' terms of service.
-
-### Supabase
-
-Supabase is used for authentication and user data persistence. Ensure your environment variables are properly configured.
-
-## 📊 Key Features
-
-- **Interactive Graph Visualization** — Visualize course dependencies and prerequisites
-- **Course Planning** — Plan your academic schedule with drag-and-drop interface
-- **Timetable Generation** — Automatically generate valid course schedules
-- **Dark Mode Support** — Built-in light/dark theme switching
-- **Responsive Design** — Works on desktop and mobile devices
-
-## 🛠 Tech Stack
-
-- **Framework** — Next.js 15 with App Router
-- **Language** — TypeScript
-- **UI Library** — Material-UI (MUI) v7
-- **State Management** — Redux Toolkit with RTK Query
-- **Database** — Neo4j (graph) + Supabase (relational)
-- **Animations** — Framer Motion
-- **Graph Visualization** — Cytoscape.js
-- **Styling** — Emotion (via MUI)
-- **Testing** — Jest
-
-## 📚 Resources
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Material-UI Documentation](https://mui.com/material-ui/)
-- [Neo4j Documentation](https://neo4j.com/docs/)
-- [Redux Toolkit Documentation](https://redux-toolkit.js.org/)
+The repository includes module data derived from NUSMods and scripts that can refresh it. Respect upstream rate limits and terms of use. A successful scheduler validation means the proposal passed the rules encoded in this application; it does not guarantee that the plan satisfies every current university or programme requirement.
