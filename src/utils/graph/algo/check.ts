@@ -15,7 +15,9 @@ export function validateSchedule(
   timetable: TimetableData,
   graph: NormalisedGraph,
   targetModules: string[],
-  maxMcsPerSemester: number = MAX_MCS_PER_SEMESTER
+  maxMcsPerSemester: number = MAX_MCS_PER_SEMESTER,
+  exemptedModules: string[] = [],
+  preservedTimetable: Record<number, string[]> = {}
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -32,8 +34,14 @@ export function validateSchedule(
     }
   }
 
-  // Track completed modules as we go through semesters
-  const completedModules = new Set<string>();
+  const preservedSemesterIds = new Set(
+    Object.keys(preservedTimetable).map(Number).filter(Number.isFinite)
+  );
+  const preservedModuleCodes = Object.values(preservedTimetable).flat();
+
+  // Exempted and preserved modules satisfy prerequisites before generation begins.
+  // Scheduled modules are added as each semester is completed below.
+  const completedModules = new Set<string>([...exemptedModules, ...preservedModuleCodes]);
   const moduleToNode = new Map<string, string>();
   const logicNodeStatus = new Map<string, { satisfied: boolean; count: number; requires: number }>();
   
@@ -46,8 +54,14 @@ export function validateSchedule(
     }
   }
 
+  // Propagate trusted history through OR/AND/N-of prerequisite nodes before
+  // validating the generated semesters.
+  updateLogicNodeSatisfaction(graph, logicNodeStatus, completedModules);
+
   // Check for duplicate modules
-  const allModules = flatTimetable.map(item => item.code);
+  const allModules = flatTimetable
+    .filter(item => !preservedSemesterIds.has(item.semester))
+    .map(item => item.code);
   const duplicates = allModules.filter((code, index) => allModules.indexOf(code) !== index);
   if (duplicates.length > 0) {
     errors.push(`Duplicate modules scheduled: ${[...new Set(duplicates)].join(', ')}`);
@@ -55,7 +69,9 @@ export function validateSchedule(
 
   // Validate each semester
   let maxCredits = 0;
-  const semesters = Object.keys(bySemester).map(Number).sort((a, b) => a - b);
+  const semesters = Object.keys(bySemester).map(Number)
+    .filter(semester => !preservedSemesterIds.has(semester))
+    .sort((a, b) => a - b);
   
   for (const semester of semesters) {
     const modules = bySemester[semester];
@@ -144,7 +160,8 @@ export function validateSchedule(
   }
 
   // Check for modules that appear in timetable but aren't in graph
-  for (const { code } of flatTimetable) {
+  for (const { code, semester } of flatTimetable) {
+    if (preservedSemesterIds.has(semester)) continue;
     if (!moduleToNode.has(code)) {
       warnings.push(`Module ${code} in timetable but not found in graph`);
     }
@@ -161,7 +178,7 @@ export function validateSchedule(
 
   const stats = {
     totalModules: flatTimetable.length,
-    totalSemesters: semesters.length,
+    totalSemesters: Object.keys(bySemester).length,
     totalCredits: flatTimetable.reduce((sum, item) => {
       const node = graph.nodes[moduleToNode.get(item.code) || ''];
       return sum + (isModuleData(node) ? (node.credits || 4) : 4);

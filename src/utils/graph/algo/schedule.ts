@@ -152,7 +152,14 @@ export function runScheduler(
 
   const timetableData: TimetableData = { semesters: cleanedSemesters };
 
-  const validation = validateSchedule(timetableData, graph, targetModules, maxMcsPerSemester);
+  const validation = validateSchedule(
+    timetableData,
+    graph,
+    targetModules,
+    maxMcsPerSemester,
+    exemptedModules,
+    preservedTimetable
+  );
   const report = generateValidationReport(validation, maxMcsPerSemester);
   console.log('Validation Report:', report);
 
