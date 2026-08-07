@@ -1,9 +1,8 @@
 // app/api/module/[code]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getModuleByCode } from '@/db/getModuleByCode';
-import { getModuleRequires } from '@/db/getModuleRequires';
-import { ModuleData } from '@/types/plannerTypes';
-import { ErrorResponse } from '@/types/errorTypes';
+import type { ModuleData } from '@/types/plannerTypes';
+import type { ErrorResponse } from '@/types/errorTypes';
 
 export async function GET(
   _req: NextRequest,
@@ -25,10 +24,6 @@ export async function GET(
       );
     }
 
-    const requires = await getModuleRequires(moduleCode);
-    if (requires) {
-      mod.requires = requires;
-    }
     return NextResponse.json(mod, { status: 200 });
   } catch (err) {
     console.error('getModule error:', err);

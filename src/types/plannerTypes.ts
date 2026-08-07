@@ -1,3 +1,4 @@
+// Normalized module data used by planner state and UI components.
 export type ModuleData = StaticModuleData & DynamicModuleData;
 
 export type DynamicModuleData = {

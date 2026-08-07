@@ -263,10 +263,17 @@ const TimetableHeader: React.FC = () => {
             <IconButton
               size="small"
               onClick={() => dispatch(toggleSidebar())}
-              sx={{ 
-                color: "text.secondary",
-                borderRadius: 1.5,
-                "&:hover": { bgcolor: "action.hover" }
+              aria-label={sidebarIsOpen ? "Close module search" : "Search modules"}
+              sx={{
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+                borderRadius: 2,
+                minWidth: 88,
+                px: 1.5,
+                gap: 0.5,
+                fontSize: "0.8125rem",
+                fontWeight: 700,
+                "&:hover": { backgroundColor: "primary.dark" },
               }}
             >
               {sidebarIsOpen ? <CloseIcon fontSize="small" /> : <SearchIcon fontSize="small" />}

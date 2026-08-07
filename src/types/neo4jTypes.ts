@@ -10,21 +10,21 @@ export type Neo4jGraph = {
   relationships: NeoRel[];
 };
 
-// Matches NUSMODS module data structure
-// Source: https://api.nusmods.com/v2/2024-2025/module
+// Raw module data returned by NUSMods and stored in moduleData.json.
 export type Neo4jModuleData = {
   moduleCode: string;
-  title: string;
-  description: string;
-  moduleCredit: string; // note: still string, e.g. "4"
-  department: string;
-  faculty: string;
+  title?: string;
+  description?: string;
+  moduleCredit?: string | number;
+  department?: string;
+  faculty?: string;
   workload?: number[]; // e.g. [3,1,0,3,3]
   prerequisite?: string;
   preclusion?: string;
   attributes?: RawAttributes;
   gradingBasisDescription?: string;
   semesterData?: RawSemesterInfo[];
+  [key: string]: unknown;
 };
 
 export type RawAttributes = {

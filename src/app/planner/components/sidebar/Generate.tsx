@@ -29,7 +29,16 @@ import {
   semestersAdapter
 } from '@/store/timetableSlice';
 import MiniModuleCard from '../timetable/MiniModuleCard';
-import { ModuleStatus } from '@/types/plannerTypes';
+import { mapModuleCodesForDisplay } from '@/utils/planner/mapModuleCodesForDisplay';
+import {
+  MAX_EXEMPTED_MODULES,
+  MAX_MCS_PER_SEMESTER,
+  MAX_TARGET_MODULES,
+  MCS_PER_SEMESTER_STEP,
+  MIN_MCS_PER_SEMESTER,
+} from '@/constants/plannerLimits';
+
+const { selectAll: selectAllSemesters } = semestersAdapter.getSelectors();
 
 const Generate: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -65,7 +74,7 @@ const Generate: React.FC = () => {
     preserveSemesters 
   } = useSelector((state: RootState) => state.timetable);
 
-  const allSemesters = useSelector((state: RootState) => semestersAdapter.getSelectors().selectAll(state.timetable.semesters));
+  const allSemesters = useSelector((state: RootState) => selectAllSemesters(state.timetable.semesters));
   const maxSemesterId = useMemo(() => {
     if (!Array.isArray(allSemesters) || allSemesters.length === 0) return -1;
     return Math.max(...allSemesters.map(s => (s && typeof s.id === 'number') ? s.id : -1));
@@ -76,29 +85,11 @@ const Generate: React.FC = () => {
 
   // Create module objects from codes
   const targetModules = useMemo(() => {
-    return targetModuleCodes
-      .map(code => {
-        const moduleData = miniModuleData.find(m => m.code === code);
-        return moduleData ? {
-          code: moduleData.code,
-          title: moduleData.title,
-          status: ModuleStatus.Satisfied
-        } : null;
-      })
-      .filter(Boolean) as Array<{ code: string; title: string; status: ModuleStatus }>;
+    return mapModuleCodesForDisplay(targetModuleCodes, miniModuleData);
   }, [targetModuleCodes]);
 
   const exemptedModules = useMemo(() => {
-    return exemptedModuleCodes
-      .map(code => {
-        const moduleData = miniModuleData.find(m => m.code === code);
-        return moduleData ? {
-          code: moduleData.code,
-          title: moduleData.title,
-          status: ModuleStatus.Satisfied
-        } : null;
-      })
-      .filter(Boolean) as Array<{ code: string; title: string; status: ModuleStatus }>;
+    return mapModuleCodesForDisplay(exemptedModuleCodes, miniModuleData);
   }, [exemptedModuleCodes]);
 
   const handleDeleteTarget = (moduleCode: string) => {
@@ -116,8 +107,14 @@ const Generate: React.FC = () => {
     }
     
     if (isSuccess && data) {
-      const semesterCount = data.semesters?.length || 0;
-      if (semesterCount === 0) {
+      const semesterCount = data.timetable.semesters.length;
+      if (!data.isValid) {
+        setSnackbar({
+          open: true,
+          message: 'Generation error: the proposed timetable is invalid. Review it before using.',
+          severity: 'warning'
+        });
+      } else if (semesterCount === 0) {
         setSnackbar({
           open: true,
           message: 'No valid timetable could be generated.',
@@ -179,14 +176,14 @@ const Generate: React.FC = () => {
   };
 
   const handleIncrementMcs = () => {
-    if (maxMcsPerSemester < 40) {
-      dispatch(maxMcsUpdated(maxMcsPerSemester + 2));
+    if (maxMcsPerSemester < MAX_MCS_PER_SEMESTER) {
+      dispatch(maxMcsUpdated(maxMcsPerSemester + MCS_PER_SEMESTER_STEP));
     }
   };
 
   const handleDecrementMcs = () => {
-    if (maxMcsPerSemester > 16) {
-      dispatch(maxMcsUpdated(maxMcsPerSemester - 2));
+    if (maxMcsPerSemester > MIN_MCS_PER_SEMESTER) {
+      dispatch(maxMcsUpdated(maxMcsPerSemester - MCS_PER_SEMESTER_STEP));
     }
   };
 
@@ -212,7 +209,7 @@ const Generate: React.FC = () => {
             Target Modules
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ({targetModules.length})
+            ({targetModules.length}/{MAX_TARGET_MODULES})
           </Typography>
         </Box>
         
@@ -257,7 +254,7 @@ const Generate: React.FC = () => {
             Exempted Modules
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ({exemptedModules.length})
+            ({exemptedModules.length}/{MAX_EXEMPTED_MODULES})
           </Typography>
         </Box>
 
@@ -313,7 +310,7 @@ const Generate: React.FC = () => {
           <IconButton 
             size="small" 
             onClick={handleDecrementMcs}
-            disabled={maxMcsPerSemester <= 16}
+            disabled={maxMcsPerSemester <= MIN_MCS_PER_SEMESTER}
             color="primary"
           >
             <RemoveIcon fontSize="small" />
@@ -326,7 +323,7 @@ const Generate: React.FC = () => {
           <IconButton 
             size="small" 
             onClick={handleIncrementMcs}
-            disabled={maxMcsPerSemester >= 40}
+            disabled={maxMcsPerSemester >= MAX_MCS_PER_SEMESTER}
             color="primary"
           >
             <AddIcon fontSize="small" />
@@ -396,7 +393,7 @@ const Generate: React.FC = () => {
         {/* Snackbar for generation feedback */}
         <Snackbar
           open={snackbar.open}
-          autoHideDuration={1500}
+          autoHideDuration={data && !data.isValid ? 6000 : 2000}
           onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
@@ -429,6 +426,13 @@ const Generate: React.FC = () => {
           {isFetching ? 'Generating...' : 'Generate Timetable'}
         </Button>
         
+        {data && !data.isValid ? (
+          <Alert severity="warning" variant="outlined" sx={{ mt: 1 }}>
+            Generation error: this proposed timetable failed validation and may
+            violate prerequisites or scheduling constraints.
+          </Alert>
+        ) : null}
+
         {error ? (
           <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
             Error generating timetable. Please try again.

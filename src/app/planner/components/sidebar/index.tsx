@@ -1,14 +1,16 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store";
-import { toggleSidebar, setActiveTab } from "@/store/sidebarSlice";
+import { closeSidebar, toggleSidebar, setActiveTab } from "@/store/sidebarSlice";
 import Box from "@mui/material/Box";
+import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import ModuleDetails from "./ModuleDetails";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import CloseIcon from "@mui/icons-material/Close";
 import ModuleSearch from "./ModuleSearch";
 import { useModuleState } from "../../hooks";
 import { SIDEBAR_WIDTH } from "@/constants";
@@ -18,7 +20,6 @@ import InfoOutlineIcon from "@mui/icons-material/InfoOutline";
 import EditCalendarIcon from "@mui/icons-material/EditCalendar";
 import Generate from "./Generate";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
 
 // Define tab configuration
 const tabs = [
@@ -37,210 +38,133 @@ const Sidebar: React.FC = () => {
 
   const sidebarWidth = isLargeScreen ? 336 : SIDEBAR_WIDTH;
 
-  const [drawerHeight, setDrawerHeight] = useState(40); // percentage
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartY = useRef(0);
-  const startHeight = useRef(0);
-
   const handleToggle = () => dispatch(toggleSidebar());
   const handleTabChange = (newValue: number) => {
     dispatch(setActiveTab(newValue));
   };
 
-  const handleDragStart = (e: React.TouchEvent) => {
-    if (!isOpen) return;
-    setIsDragging(true);
-    dragStartY.current = e.touches[0].clientY;
-    startHeight.current = drawerHeight;
-  };
-
-  const handleDragMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = dragStartY.current - currentY;
-    const newHeight = startHeight.current + (deltaY / window.innerHeight) * 100;
-    const clampedHeight = Math.min(Math.max(newHeight, 20), 95);
-    setDrawerHeight(clampedHeight);
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    // Auto-close if dragged below 35% of screen height
-    if (drawerHeight < 35) {
-      dispatch(toggleSidebar());
-      setDrawerHeight(40); // Reset to default height
-    }
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("touchmove", handleDragMove as any);
-      window.addEventListener("touchend", handleDragEnd);
-      return () => {
-        window.removeEventListener("touchmove", handleDragMove as any);
-        window.removeEventListener("touchend", handleDragEnd);
-      };
-    }
-  }, [isDragging]);
-
   const selectedModuleCode = searchParams.get("module");
   const { mod, isPlanned, isLoading, isFetching }  = useModuleState(selectedModuleCode);
 
   return isMobile ? (
-    <Box
-      sx={{
-        position: "fixed",
-        bottom: isOpen ? 0 : `calc(-${drawerHeight}vh)`,
-        left: 0,
-        right: 0,
-        height: `${drawerHeight}vh`,
-        maxHeight: `${drawerHeight}vh`,
-        backgroundColor: "background.default",
-        borderTop: "2px solid",
-        borderColor: "divider",
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
-        boxShadow: 4,
-        overflowY: "auto",
-        transition: isDragging ? "none" : "bottom 0.3s, height 0.3s",
-        zIndex: 1200,
-        display: "flex",
-        flexDirection: "column",
-      }}
-      onTouchStart={handleDragStart}
-      onTouchMove={handleDragMove}
-      onTouchEnd={handleDragEnd}
-    >
-      {/* Rounded top bar handle */}
-      <Box
-        sx={{
-          position: "sticky",
-          top: 0,
-          left: 0,
-          right: 0,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: 24,
-          backgroundColor: "background.default",
-          borderTopLeftRadius: 16,
-          borderTopRightRadius: 16,
-          cursor: "grab",
-          touchAction: "none",
-          "&:active": {
-            cursor: "grabbing",
+    <Drawer
+      elevation={0}
+      anchor="left"
+      open={isOpen}
+      onClose={() => dispatch(closeSidebar())}
+      transitionDuration={{ enter: 225, exit: 180 }}
+      ModalProps={{ keepMounted: true, disableScrollLock: false }}
+      slotProps={{
+        backdrop: { sx: { top: "64px" } },
+        paper: {
+          sx: {
+            top: "64px",
+            bottom: "auto",
+            width: "100vw",
+            height: "calc(100dvh - 64px)",
+            boxSizing: "border-box",
+            overflow: "hidden",
+            backgroundColor: "background.default",
+            borderRight: "1px solid",
+            borderColor: "divider",
           },
-        }}
-        onTouchStart={handleDragStart}
-      >
+        },
+      }}
+      sx={{ top: "64px" }}
+    >
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Box
+          data-dnd-no-autoscroll
           sx={{
-            width: 40,
-            height: 4,
-            backgroundColor: "divider",
-            borderRadius: "2px",
-            transition: "background-color 0.2s",
+            p: 2,
+            gap: 2,
+            display: "flex",
+            flex: 1,
+            minHeight: 0,
+            flexDirection: "column",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
           }}
-        />
-      </Box>
-
-      {/* Grab handle when closed */}
-      {!isOpen && (
-        <Box
-          onClick={handleToggle}
-          sx={{
-            position: "absolute",
-            bottom: -20,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 40,
-            height: 4,
-            backgroundColor: "divider",
-            borderRadius: "2px",
-            cursor: "pointer",
-            transition: "background-color 0.2s",
-            "&:hover": {
-              backgroundColor: "primary.main",
-            },
-          }}
-          role="button"
-          aria-label="Swipe up to open sidebar"
-          tabIndex={0}
-        />
-      )}
-
-      {/* Smooth Animated Tabs - Pill Style */}
-      <Box
-        sx={{
-          display: "flex",
-          gap: 1,
-          padding: "12px 16px",
-          backgroundColor: "transparent",
-          paddingBottom: 0
-        }}
-      >
-        {tabs.map((tab, index) => (
+        >
+          {/* Smooth Animated Tabs - Pill Style */}
           <Box
-            key={index}
-            onClick={() => handleTabChange(index)}
             sx={{
-              flex: 1,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
               gap: 1,
-              padding: "12px 16px",
-              cursor: "pointer",
-              position: "relative",
-              color: tabValue === index ? "primary.contrastText" : "text.secondary",
-              transition: "color 0.2s",
-              zIndex: 1,
-              minHeight: "48px",
-              borderRadius: "8px",
-              userSelect: "none",
+              backgroundColor: "transparent",
             }}
-            role="button"
-            tabIndex={0}
-            aria-pressed={tabValue === index}
-            aria-label={`${tab.label} tab`}
           >
-            {tabValue === index && (
-              <motion.div
-                layoutId="mobile-tab-indicator"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundColor: theme.palette.primary.main,
+            {tabs.map((tab, index) => (
+              <Box
+                key={index}
+                onClick={() => handleTabChange(index)}
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  padding: "12px 16px",
+                  cursor: "pointer",
+                  position: "relative",
+                  color: tabValue === index ? "primary.contrastText" : "text.secondary",
+                  transition: "color 0.2s",
+                  zIndex: 1,
+                  minHeight: "48px",
                   borderRadius: "8px",
-                  zIndex: -1,
+                  userSelect: "none",
                 }}
-                transition={isDragging ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              {tab.icon}
-            </Box>
-          </Box>
-        ))}
-      </Box>
-
-      <Box sx={{ p: 2, gap: 2, display: "flex", flexDirection: "column" }}>
-        {tabValue === 0 && (
-          <>
-            {isOpen && <ModuleSearch />}
-            {isOpen && (isLoading || isFetching) && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 240, width: '100%' }}>
-                <CircularProgress />
+                role="button"
+                tabIndex={0}
+                aria-pressed={tabValue === index}
+                aria-label={`${tab.label} tab`}
+              >
+                {tabValue === index && (
+                  <motion.div
+                    layoutId="mobile-tab-indicator"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      backgroundColor: theme.palette.primary.main,
+                      borderRadius: "8px",
+                      zIndex: -1,
+                    }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  />
+                )}
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  {tab.icon}
+                </Box>
               </Box>
-            )}
-            {mod && isOpen && !(isLoading || isFetching) && <ModuleDetails module={mod} isPlanned={isPlanned} />}
-          </>
-        )}
-        {tabValue === 1 && (
-          <Generate />
-        )}
+            ))}
+            <IconButton
+              onClick={() => dispatch(closeSidebar())}
+              aria-label="Close sidebar"
+              size="small"
+              sx={{ color: "text.secondary", flexShrink: 0 }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+
+          {tabValue === 0 && (
+            <>
+              <ModuleSearch />
+              {(isLoading || isFetching) && (
+                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 240, width: "100%" }}>
+                  <CircularProgress />
+                </Box>
+              )}
+              {mod && !(isLoading || isFetching) && (
+                <ModuleDetails module={mod} isPlanned={isPlanned} />
+              )}
+            </>
+          )}
+          {tabValue === 1 && <Generate />}
+        </Box>
       </Box>
-    </Box>
+    </Drawer>
   ) : (
     <Box
       sx={{

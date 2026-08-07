@@ -63,11 +63,11 @@ const addTimetableListeners = (startAppListening: AppStartListening) => {
         api.dispatch(
           // Persist the working timetable into the saved timetables
           // so duplicating or switching will use latest changes
-          ({ type: 'planner/timetableUpdated', payload: {
+          timetableUpdated({
             name: active,
             modules: state.timetable.modules,
             semesters: state.timetable.semesters,
-          } } as any)
+          })
         );
       }
     },
@@ -108,17 +108,28 @@ const addTimetableListeners = (startAppListening: AppStartListening) => {
     effect: async (action, api) => {
       api.cancelActiveListeners();
       // Extract module codes from the fetched timetable
-      const semesters = action.payload.semesters;
+      const semesters = action.payload.timetable.semesters;
       const uniqueModuleCodes = [
         ...new Set(semesters.flatMap((s) => s.moduleCodes)),
       ];
-      // Dispatch getModuleByCode for each code and wait for all to resolve
-      await Promise.all(
-        uniqueModuleCodes.map((code) =>
-          api.dispatch(apiSlice.endpoints.getModuleByCode.initiate(code, { forceRefetch: true }))
-        )
+      // Reuse RTK Query's per-code cache. A cached query does not emit another
+      // fulfilled action, so explicitly copy every result into timetable state.
+      const modules = await Promise.all(
+        uniqueModuleCodes.map(async (code) => {
+          const result = await api.dispatch(
+            apiSlice.endpoints.getModuleByCode.initiate(code, { subscribe: false })
+          );
+          return result.data ?? null;
+        })
       );
-      // Now all static data should be in cache, so check issues
+
+      modules.forEach((module) => {
+        if (module) {
+          api.dispatch(timetableActions.moduleCached({ module }));
+        }
+      });
+
+      // Now all available static data is in timetable state, so check issues.
       api.dispatch(updateModuleStates());
     },
   });

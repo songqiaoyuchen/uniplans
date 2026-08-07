@@ -12,6 +12,7 @@ import type { PrereqTree } from "@/types/plannerTypes";
 import { styled } from "@mui/material/styles";
 import SidebarModule from "./SidebarModule";
 import { memo } from "react";
+import { useGetModuleSummariesQuery } from "@/store/apiSlice";
 
 interface PrereqTreeViewProps {
   prereqTree: PrereqTree;
@@ -28,11 +29,39 @@ const getAllParentIds = (node: PrereqTree, prefix = "0"): string[] => {
   return [prefix, ...childIds];
 };
 
+const isModulePattern = (code: string) => code.includes("%") || code.includes("*");
+
+const getPrerequisiteModuleCodes = (tree: PrereqTree): string[] => {
+  const codes = new Set<string>();
+
+  const visit = (node: PrereqTree) => {
+    if (node.type === "module") {
+      if (!isModulePattern(node.moduleCode)) codes.add(node.moduleCode.toUpperCase());
+      return;
+    }
+    node.children.forEach(visit);
+  };
+
+  visit(tree);
+  return [...codes].sort();
+};
+
 const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
   const allParentIds = React.useMemo(
     () => getAllParentIds(prereqTree),
     [prereqTree],
   );
+  const moduleCodes = React.useMemo(
+    () => getPrerequisiteModuleCodes(prereqTree),
+    [prereqTree],
+  );
+  const { data: summaries = [], isLoading, isError } =
+    useGetModuleSummariesQuery(moduleCodes, { skip: moduleCodes.length === 0 });
+  const summariesByCode = React.useMemo(
+    () => new Map(summaries.map((summary) => [summary.code, summary])),
+    [summaries],
+  );
+
   const [expandedItems, setExpandedItems] =
     React.useState<string[]>(allParentIds);
 
@@ -44,7 +73,7 @@ const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
   const renderTree = (node: PrereqTree, idPath = "0"): React.ReactNode => {
     if (node.type === "module") {
       // Check if this is a pattern-based module code (contains % or other wildcards)
-      const isPattern = node.moduleCode.includes('%') || node.moduleCode.includes('*');
+      const isPattern = isModulePattern(node.moduleCode);
       
       if (isPattern) {
         // Render pattern modules as descriptive text
@@ -98,6 +127,9 @@ const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
           label={
             <SidebarModule
               moduleCode={node.moduleCode}
+              summary={summariesByCode.get(node.moduleCode.toUpperCase())}
+              isLoading={isLoading}
+              isError={isError}
             />
           }
         />

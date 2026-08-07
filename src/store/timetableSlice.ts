@@ -4,6 +4,12 @@ import { RootState } from '.';
 import { apiSlice } from './apiSlice';
 import { arrayMove } from '@dnd-kit/sortable';
 import { checkModuleStates, CheckModuleStatesArgs, ModuleUpdatePayload } from '@/utils/planner/checkModuleStates';
+import {
+  DEFAULT_MCS_PER_SEMESTER,
+  isAllowedMaxMcs,
+  MAX_EXEMPTED_MODULES,
+  MAX_TARGET_MODULES,
+} from '@/constants/plannerLimits';
 
 export interface Semester {
   id: number; // e.g., 0 for Y1S1, 1 for Y1Winter, 2 for Y1S2, 3 for Y1Summer
@@ -43,7 +49,7 @@ const timetableSlice = createSlice({
     isMinimalView: false,
     isVerticalView: true,
     useSpecialTerms: true,
-    maxMcsPerSemester: 20,
+    maxMcsPerSemester: DEFAULT_MCS_PER_SEMESTER,
     preserveTimetable: false,
     preserveSemesters: 0,
     targetModules: [] as string[],
@@ -59,6 +65,10 @@ const timetableSlice = createSlice({
     ) {
       modulesAdapter.setAll(state.modules, action.payload.modules);
       semestersAdapter.setAll(state.semesters, action.payload.semesters);
+      const scheduledCodes = new Set(action.payload.semesters.flatMap((semester) => semester.moduleCodes));
+      state.exemptedModules = [...new Set(state.exemptedModules)].filter(
+        (code) => !scheduledCodes.has(code)
+      );
     },
     
     // handles adding a module to the timeable
@@ -79,6 +89,7 @@ const timetableSlice = createSlice({
       const semester = state.semesters.entities[destSemesterId];
       if (semester && !semester.moduleCodes.includes(module.code)) { // defensive checks
         semester.moduleCodes.push(module.code);
+        state.exemptedModules = state.exemptedModules.filter(code => code !== module.code);
       }
     },
 
@@ -181,6 +192,7 @@ const timetableSlice = createSlice({
           : dst.moduleCodes.length;
 
       dst.moduleCodes.splice(insertIndex, 0, activeModuleCode);
+      state.exemptedModules = state.exemptedModules.filter(code => code !== activeModuleCode);
     },
 
     // for module removal
@@ -234,7 +246,9 @@ const timetableSlice = createSlice({
       state.useSpecialTerms = !state.useSpecialTerms;
     },
     maxMcsUpdated(state, action: PayloadAction<number>) {
-      state.maxMcsPerSemester = action.payload;
+      if (isAllowedMaxMcs(action.payload)) {
+        state.maxMcsPerSemester = action.payload;
+      }
     },
     preserveTimetableToggled: (state) => {
       state.preserveTimetable = !state.preserveTimetable;
@@ -244,9 +258,14 @@ const timetableSlice = createSlice({
     },
     // handles target modules
     targetModuleAdded: (state, action: PayloadAction<string>) => {
-      if (!state.targetModules.includes(action.payload)) {
-        state.targetModules.push(action.payload);
+      const moduleCode = action.payload;
+      if (!state.targetModules.includes(moduleCode)) {
+        if (state.targetModules.length >= MAX_TARGET_MODULES) return;
+        state.targetModules.push(moduleCode);
       }
+      state.exemptedModules = state.exemptedModules.filter(
+        (code) => code !== moduleCode
+      );
     },
     targetModuleRemoved: (state, action: PayloadAction<string>) => {
       state.targetModules = state.targetModules.filter(code => code !== action.payload);
@@ -257,9 +276,24 @@ const timetableSlice = createSlice({
 
     // handles exempted modules
     exemptedModuleAdded: (state, action: PayloadAction<string>) => {
-      if (!state.exemptedModules.includes(action.payload)) {
-        state.exemptedModules.push(action.payload);
+      const moduleCode = action.payload;
+      if (!state.exemptedModules.includes(moduleCode)) {
+        if (state.exemptedModules.length >= MAX_EXEMPTED_MODULES) return;
+        state.exemptedModules.push(moduleCode);
       }
+      state.targetModules = state.targetModules.filter(
+        (code) => code !== moduleCode
+      );
+
+      // Last explicit action wins: exemption removes every scheduled occurrence.
+      for (const semester of Object.values(state.semesters.entities)) {
+        semester.moduleCodes = semester.moduleCodes.filter(code => code !== moduleCode);
+      }
+
+      const emptySpecialTermIds = Object.values(state.semesters.entities)
+        .filter((semester) => semester.moduleCodes.length === 0 && semester.id % 2 === 1)
+        .map((semester) => semester.id);
+      semestersAdapter.removeMany(state.semesters, emptySpecialTermIds);
     },
     exemptedModuleRemoved: (state, action: PayloadAction<string>) => {
       state.exemptedModules = state.exemptedModules.filter(code => code !== action.payload);
@@ -308,7 +342,7 @@ const timetableSlice = createSlice({
       (state, action) => {
         // Ensure there are no gaps in EVEN semester IDs (main terms).
         // Odd semester IDs (special terms) are optional and only included if present.
-        const incoming = action.payload.semesters ?? [];
+        const incoming = action.payload.timetable.semesters ?? [];
         if (incoming.length > 0) {
           const presentById = new Map(incoming.map((s) => [s.id, s]));
 
@@ -349,7 +383,31 @@ const timetableSlice = createSlice({
           semestersAdapter.setAll(state.semesters, []);
         }
 
-        modulesAdapter.removeAll(state.modules); // clear stale modules
+        const incomingModuleCodes = new Set(
+          incoming.flatMap((semester) => semester.moduleCodes)
+        );
+        state.exemptedModules = [...new Set(state.exemptedModules)].filter(
+          (code) => !incomingModuleCodes.has(code)
+        );
+
+        const generationArgs = action.meta.arg.originalArgs;
+        if (!generationArgs) {
+          modulesAdapter.removeAll(state.modules);
+          return;
+        }
+
+        const preservedModuleCodes = generationArgs.preserveTimetable
+          ? new Set(Object.values(generationArgs.preservedData ?? {}).flat())
+          : new Set<string>();
+        // Generated timetables only contain module codes. Keep the existing
+        // entities for explicitly preserved modules so dynamic metadata such as
+        // grades and tags survives while the remaining modules are refetched.
+        const moduleIdsToRemove = state.modules.ids.filter(
+          (moduleCode) =>
+            !preservedModuleCodes.has(moduleCode) ||
+            !incomingModuleCodes.has(moduleCode)
+        );
+        modulesAdapter.removeMany(state.modules, moduleIdsToRemove);
       }
     );
   }
