@@ -2,10 +2,16 @@ import type { TimetableGenerationResult } from "@/types/graphTypes";
 import { ModuleStatus, type ModuleData } from "@/types/plannerTypes";
 import reducer, {
   exemptedModuleAdded,
+  maxMcsUpdated,
   moduleAdded,
   semesterAdded,
+  targetModuleAdded,
   timetableLoaded,
 } from "./timetableSlice";
+import {
+  MAX_EXEMPTED_MODULES,
+  MAX_TARGET_MODULES,
+} from "@/constants/plannerLimits";
 
 const moduleData = (
   code: string,
@@ -179,5 +185,53 @@ describe("timetable and exemption mutual exclusivity", () => {
 
     expect(state.exemptedModules).toEqual([]);
     expect(state.semesters.entities[0]?.moduleCodes).toEqual(["CS1010"]);
+  });
+});
+
+describe("planner input limits", () => {
+  test("caps target modules at the shared frontend limit", () => {
+    let state = reducer(undefined, { type: "test/init" });
+
+    for (let index = 0; index <= MAX_TARGET_MODULES; index++) {
+      state = reducer(state, targetModuleAdded(`TARGET${index}`));
+    }
+
+    expect(state.targetModules).toHaveLength(MAX_TARGET_MODULES);
+    expect(state.targetModules).not.toContain(`TARGET${MAX_TARGET_MODULES}`);
+  });
+
+  test("caps exempted modules at the shared frontend limit", () => {
+    let state = reducer(undefined, { type: "test/init" });
+
+    for (let index = 0; index <= MAX_EXEMPTED_MODULES; index++) {
+      state = reducer(state, exemptedModuleAdded(`EXEMPTED${index}`));
+    }
+
+    expect(state.exemptedModules).toHaveLength(MAX_EXEMPTED_MODULES);
+    expect(state.exemptedModules).not.toContain(`EXEMPTED${MAX_EXEMPTED_MODULES}`);
+  });
+
+  test("keeps target and exemption state mutually exclusive", () => {
+    let state = reducer(undefined, targetModuleAdded("CS1010"));
+    state = reducer(state, exemptedModuleAdded("CS1010"));
+
+    expect(state.targetModules).toEqual([]);
+    expect(state.exemptedModules).toEqual(["CS1010"]);
+
+    state = reducer(state, targetModuleAdded("CS1010"));
+
+    expect(state.targetModules).toEqual(["CS1010"]);
+    expect(state.exemptedModules).toEqual([]);
+  });
+
+  test("accepts only MC values exposed by the frontend", () => {
+    let state = reducer(undefined, maxMcsUpdated(40));
+    expect(state.maxMcsPerSemester).toBe(40);
+
+    state = reducer(state, maxMcsUpdated(17));
+    expect(state.maxMcsPerSemester).toBe(40);
+
+    state = reducer(state, maxMcsUpdated(18));
+    expect(state.maxMcsPerSemester).toBe(18);
   });
 });

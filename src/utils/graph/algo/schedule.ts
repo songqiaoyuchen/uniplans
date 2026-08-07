@@ -11,6 +11,7 @@ import { MAX_SEMESTERS } from './constants';
 import { validateSchedule, generateValidationReport } from './check';
 import { isModuleData } from './constants';
 import { cleanSemesters } from './clean';
+import { DEFAULT_MCS_PER_SEMESTER } from '@/constants/plannerLimits';
 
 /**
  * Runs the complete scheduling algorithm.
@@ -20,7 +21,7 @@ export function runScheduler(
   targetModules: string[] = [], // module codes
   exemptedModules: string[] = [], // module codes
   useSpecialTerms: boolean = true,
-  maxMcsPerSemester: number = 20,
+  maxMcsPerSemester: number = DEFAULT_MCS_PER_SEMESTER,
   preservedTimetable: Record<number, string[]> = {}
 ): TimetableGenerationResult {
   

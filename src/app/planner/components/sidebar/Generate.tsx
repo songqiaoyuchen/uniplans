@@ -30,6 +30,13 @@ import {
 } from '@/store/timetableSlice';
 import MiniModuleCard from '../timetable/MiniModuleCard';
 import { mapModuleCodesForDisplay } from '@/utils/planner/mapModuleCodesForDisplay';
+import {
+  MAX_EXEMPTED_MODULES,
+  MAX_MCS_PER_SEMESTER,
+  MAX_TARGET_MODULES,
+  MCS_PER_SEMESTER_STEP,
+  MIN_MCS_PER_SEMESTER,
+} from '@/constants/plannerLimits';
 
 const { selectAll: selectAllSemesters } = semestersAdapter.getSelectors();
 
@@ -169,14 +176,14 @@ const Generate: React.FC = () => {
   };
 
   const handleIncrementMcs = () => {
-    if (maxMcsPerSemester < 40) {
-      dispatch(maxMcsUpdated(maxMcsPerSemester + 2));
+    if (maxMcsPerSemester < MAX_MCS_PER_SEMESTER) {
+      dispatch(maxMcsUpdated(maxMcsPerSemester + MCS_PER_SEMESTER_STEP));
     }
   };
 
   const handleDecrementMcs = () => {
-    if (maxMcsPerSemester > 16) {
-      dispatch(maxMcsUpdated(maxMcsPerSemester - 2));
+    if (maxMcsPerSemester > MIN_MCS_PER_SEMESTER) {
+      dispatch(maxMcsUpdated(maxMcsPerSemester - MCS_PER_SEMESTER_STEP));
     }
   };
 
@@ -202,7 +209,7 @@ const Generate: React.FC = () => {
             Target Modules
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ({targetModules.length})
+            ({targetModules.length}/{MAX_TARGET_MODULES})
           </Typography>
         </Box>
         
@@ -247,7 +254,7 @@ const Generate: React.FC = () => {
             Exempted Modules
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            ({exemptedModules.length})
+            ({exemptedModules.length}/{MAX_EXEMPTED_MODULES})
           </Typography>
         </Box>
 
@@ -303,7 +310,7 @@ const Generate: React.FC = () => {
           <IconButton 
             size="small" 
             onClick={handleDecrementMcs}
-            disabled={maxMcsPerSemester <= 16}
+            disabled={maxMcsPerSemester <= MIN_MCS_PER_SEMESTER}
             color="primary"
           >
             <RemoveIcon fontSize="small" />
@@ -316,7 +323,7 @@ const Generate: React.FC = () => {
           <IconButton 
             size="small" 
             onClick={handleIncrementMcs}
-            disabled={maxMcsPerSemester >= 40}
+            disabled={maxMcsPerSemester >= MAX_MCS_PER_SEMESTER}
             color="primary"
           >
             <AddIcon fontSize="small" />

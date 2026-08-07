@@ -4,6 +4,12 @@ import { RootState } from '.';
 import { apiSlice } from './apiSlice';
 import { arrayMove } from '@dnd-kit/sortable';
 import { checkModuleStates, CheckModuleStatesArgs, ModuleUpdatePayload } from '@/utils/planner/checkModuleStates';
+import {
+  DEFAULT_MCS_PER_SEMESTER,
+  isAllowedMaxMcs,
+  MAX_EXEMPTED_MODULES,
+  MAX_TARGET_MODULES,
+} from '@/constants/plannerLimits';
 
 export interface Semester {
   id: number; // e.g., 0 for Y1S1, 1 for Y1Winter, 2 for Y1S2, 3 for Y1Summer
@@ -43,7 +49,7 @@ const timetableSlice = createSlice({
     isMinimalView: false,
     isVerticalView: true,
     useSpecialTerms: true,
-    maxMcsPerSemester: 20,
+    maxMcsPerSemester: DEFAULT_MCS_PER_SEMESTER,
     preserveTimetable: false,
     preserveSemesters: 0,
     targetModules: [] as string[],
@@ -240,7 +246,9 @@ const timetableSlice = createSlice({
       state.useSpecialTerms = !state.useSpecialTerms;
     },
     maxMcsUpdated(state, action: PayloadAction<number>) {
-      state.maxMcsPerSemester = action.payload;
+      if (isAllowedMaxMcs(action.payload)) {
+        state.maxMcsPerSemester = action.payload;
+      }
     },
     preserveTimetableToggled: (state) => {
       state.preserveTimetable = !state.preserveTimetable;
@@ -250,9 +258,14 @@ const timetableSlice = createSlice({
     },
     // handles target modules
     targetModuleAdded: (state, action: PayloadAction<string>) => {
-      if (!state.targetModules.includes(action.payload)) {
-        state.targetModules.push(action.payload);
+      const moduleCode = action.payload;
+      if (!state.targetModules.includes(moduleCode)) {
+        if (state.targetModules.length >= MAX_TARGET_MODULES) return;
+        state.targetModules.push(moduleCode);
       }
+      state.exemptedModules = state.exemptedModules.filter(
+        (code) => code !== moduleCode
+      );
     },
     targetModuleRemoved: (state, action: PayloadAction<string>) => {
       state.targetModules = state.targetModules.filter(code => code !== action.payload);
@@ -265,8 +278,12 @@ const timetableSlice = createSlice({
     exemptedModuleAdded: (state, action: PayloadAction<string>) => {
       const moduleCode = action.payload;
       if (!state.exemptedModules.includes(moduleCode)) {
+        if (state.exemptedModules.length >= MAX_EXEMPTED_MODULES) return;
         state.exemptedModules.push(moduleCode);
       }
+      state.targetModules = state.targetModules.filter(
+        (code) => code !== moduleCode
+      );
 
       // Last explicit action wins: exemption removes every scheduled occurrence.
       for (const semester of Object.values(state.semesters.entities)) {

@@ -5,10 +5,10 @@
  */
 import { LogicNode } from "@/types/graphTypes";
 import { ModuleData } from "@/types/plannerTypes";
+import { MAX_SCHEDULER_SEMESTER_ID } from "@/constants/plannerLimits";
 
 // Scheduling constraints
-export const MAX_MCS_PER_SEMESTER = 24;
-export const MAX_SEMESTERS = 20;
+export const MAX_SEMESTERS = MAX_SCHEDULER_SEMESTER_ID;
 
 // Type guards
 export function isNofNode(node: LogicNode | ModuleData | undefined): node is LogicNode {

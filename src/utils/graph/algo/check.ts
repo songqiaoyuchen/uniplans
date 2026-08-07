@@ -6,7 +6,8 @@
  **/
 
 import { NormalisedGraph, TimetableData, ValidationResult } from '@/types/graphTypes';
-import { isNofNode, isModuleData, MAX_MCS_PER_SEMESTER } from './constants';
+import { isNofNode, isModuleData } from './constants';
+import { DEFAULT_MCS_PER_SEMESTER } from '@/constants/plannerLimits';
 
 /**
  * Validates that a generated timetable satisfies all constraints
@@ -15,7 +16,7 @@ export function validateSchedule(
   timetable: TimetableData,
   graph: NormalisedGraph,
   targetModules: string[],
-  maxMcsPerSemester: number = MAX_MCS_PER_SEMESTER,
+  maxMcsPerSemester: number = DEFAULT_MCS_PER_SEMESTER,
   exemptedModules: string[] = [],
   preservedTimetable: Record<number, string[]> = {}
 ): ValidationResult {
@@ -247,7 +248,7 @@ function updateLogicNodeSatisfaction(
 /**
  * Generates a detailed report of the validation results
  */
-export function generateValidationReport(result: ValidationResult, maxMcsPerSemester: number = MAX_MCS_PER_SEMESTER): string {
+export function generateValidationReport(result: ValidationResult, maxMcsPerSemester: number = DEFAULT_MCS_PER_SEMESTER): string {
   const lines: string[] = [];
     
   lines.push(`Status: ${result.isValid ? '✅ VALID' : '❌ INVALID'}\n`);

@@ -4,25 +4,31 @@ import { normaliseNodes } from '@/utils/graph/normaliseNodes';
 import { runScheduler } from '@/utils/graph/algo/schedule';
 import { ErrorResponse } from '@/types/errorTypes';
 import { TimetableGenerationResult } from '@/types/graphTypes';
+import { validateTimetableRequest } from '@/utils/planner/validateTimetableRequest';
 
 export async function POST(request: NextRequest): Promise<NextResponse<TimetableGenerationResult | ErrorResponse>> {
+  let body: unknown;
+
   try {
-    const body = await request.json();
-    const { 
-      required: requiredModuleCodes = [], 
-      exempted: exemptedModuleCodes = [], 
-      specialTerms: useSpecialTerms = false, 
-      maxMcs: maxMcsPerSemester = 20,
-      preservedTimetable = {} 
-    } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 
-    if (requiredModuleCodes.length === 0) {
-      return NextResponse.json(
-        { error: 'No target modules specified' },
-        { status: 400 }
-      );
-    }
+  const validation = validateTimetableRequest(body);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
 
+  const {
+    requiredModuleCodes,
+    exemptedModuleCodes,
+    useSpecialTerms,
+    maxMcsPerSemester,
+    preservedTimetable,
+  } = validation.data;
+
+  try {
     console.log('=== START OF REPORT ===')
     console.log('📚 Generating timetable for:', {
       required: requiredModuleCodes,
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
   } catch (error) {
     console.error('❌ Failed to generate timetable:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate timetable' },
+      { error: 'Failed to generate timetable' },
       { status: 500 }
     );
   }
