@@ -13,6 +13,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Navlink from "../ui/Navlink";
 import SpeedDial from "@mui/material/SpeedDial";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Backdrop from "@mui/material/Backdrop";
 import CloseIcon from "@mui/icons-material/Close";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
@@ -43,10 +45,27 @@ function Navbar() {
   };
 
   return (
-    <AppBar position="fixed" elevation={0} sx={{ height: "64px" }}>
+    <AppBar
+      position="fixed"
+      elevation={0}
+      sx={{
+        height: "64px",
+        zIndex: (theme) => theme.zIndex.drawer + 2,
+      }}
+    >
+      <Backdrop
+        open={mobileNavOpen}
+        onClick={() => setMobileNavOpen(false)}
+        sx={{
+          top: "64px",
+          zIndex: 0,
+        }}
+      />
       <Toolbar
         disableGutters
         sx={{
+          position: "relative",
+          zIndex: 1,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -92,62 +111,68 @@ function Navbar() {
           </Box>
 
           {/* Mobile navigation */}
-          <Box
-            sx={{
-              position: "relative",
-              display: { xs: "flex", md: "none" },
-            }}
+          <ClickAwayListener
+            onClickAway={() => setMobileNavOpen(false)}
+            mouseEvent="onMouseDown"
+            touchEvent="onTouchStart"
           >
-            <IconButton
-              size="large"
-              onClick={() => setMobileNavOpen((open) => !open)}
-              color="inherit"
-              aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
-              aria-expanded={mobileNavOpen}
-              aria-controls="Mobilenavigation-actions"
+            <Box
               sx={{
-                borderRadius: 1.5,
-                "&:hover": { bgcolor: "action.hover" },
+                position: "relative",
+                display: { xs: "flex", md: "none" },
               }}
             >
-              {mobileNavOpen ? <CloseIcon /> : <MenuIcon />}
-            </IconButton>
+              <IconButton
+                size="large"
+                onClick={() => setMobileNavOpen((open) => !open)}
+                color="inherit"
+                aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={mobileNavOpen}
+                aria-controls="Mobilenavigation-actions"
+                sx={{
+                  borderRadius: 1.5,
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                {mobileNavOpen ? <CloseIcon /> : <MenuIcon />}
+              </IconButton>
 
-            <SpeedDial
-              ariaLabel="Mobile navigation"
-              direction="down"
-              open={mobileNavOpen}
-              onClose={() => setMobileNavOpen(false)}
-              FabProps={{
-                "aria-hidden": true,
-                tabIndex: -1,
-                sx: { display: "none" },
-              }}
-              sx={{
-                position: "absolute",
-                top: "60px",
-                left: -4,
-                "& .MuiSpeedDial-actions": {
-                  mt: "0 !important",
-                  pt: 0,
-                },
-              }}
-            >
-              {pages.map((page) => (
-                <SpeedDialAction
-                  key={page.name}
-                  icon={page.icon}
-                  tooltipTitle={page.name}
-                  tooltipOpen={mobileNavOpen}
-                  tooltipPlacement="right"
-                  onClick={() => {
-                    setMobileNavOpen(false);
-                    router.push(page.href);
-                  }}
-                />
-              ))}
-            </SpeedDial>
-          </Box>
+              <SpeedDial
+                ariaLabel="Mobile navigation"
+                direction="down"
+                open={mobileNavOpen}
+                onClose={() => setMobileNavOpen(false)}
+                FabProps={{
+                  "aria-hidden": true,
+                  tabIndex: -1,
+                  sx: { display: "none" },
+                }}
+                sx={{
+                  position: "absolute",
+                  top: "60px",
+                  left: -4,
+                  "& .MuiSpeedDial-actions": {
+                    mt: "0 !important",
+                    pt: 0,
+                  },
+                }}
+              >
+                {pages.map((page) => (
+                  <SpeedDialAction
+                    key={page.name}
+                    icon={page.icon}
+                    tooltipTitle={page.name}
+                    tooltipOpen={mobileNavOpen}
+                    tooltipPlacement="right"
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      router.push(page.href);
+                    }}
+                  />
+                ))}
+              </SpeedDial>
+            </Box>
+          </ClickAwayListener>
         </Box>
 
         {/* Mobile Title (Centered) */}
