@@ -1,9 +1,36 @@
 import reducer, {
   currentTimetableSet,
+  plannerInitialised,
   timetableAdded,
   timetableRenamed,
   timetableUpdated,
 } from "./plannerSlice";
+import { ModuleStatus } from "@/types/plannerTypes";
+
+describe("planner first-run timetable", () => {
+  test("creates a four-semester example with completed grades", () => {
+    const state = reducer(undefined, plannerInitialised());
+    const example = state.timetables.entities["Example Plan"];
+
+    expect(state.activeTimetableName).toBe("Example Plan");
+    expect(example?.semesters.ids).toEqual([0, 2, 4, 6]);
+    expect(example?.modules.entities.CS1101S).toMatchObject({
+      grade: "A-",
+      status: ModuleStatus.Completed,
+    });
+    expect(example?.modules.entities.CS2040S?.grade).toBeUndefined();
+  });
+
+  test("does not replace an existing timetable", () => {
+    let state = reducer(undefined, { type: "test/init" });
+    state = reducer(state, timetableAdded({ name: "My Plan" }));
+
+    const nextState = reducer(state, plannerInitialised());
+
+    expect(nextState).toBe(state);
+    expect(nextState.timetables.ids).toEqual(["My Plan"]);
+  });
+});
 
 function addTimetable(state: ReturnType<typeof reducer>, name: string, code: string) {
   const added = reducer(state, timetableAdded({ name }));

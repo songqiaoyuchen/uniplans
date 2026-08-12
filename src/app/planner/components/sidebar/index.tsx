@@ -1,7 +1,12 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store";
-import { closeSidebar, toggleSidebar, setActiveTab } from "@/store/sidebarSlice";
+import {
+  closeSidebar,
+  resolveSidebarOpen,
+  setActiveTab,
+  toggleSidebar,
+} from "@/store/sidebarSlice";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
@@ -30,11 +35,12 @@ const tabs = [
 const Sidebar: React.FC = () => {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
-  const isOpen = useAppSelector((state) => state.sidebar.isOpen);
+  const storedIsOpen = useAppSelector((state) => state.sidebar.isOpen);
   const tabValue = useAppSelector((state) => state.sidebar.activeTab);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up("lg"));
+  const isOpen = resolveSidebarOpen(storedIsOpen, isMobile);
 
   const sidebarWidth = isLargeScreen ? 336 : SIDEBAR_WIDTH;
 

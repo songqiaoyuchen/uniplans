@@ -3,6 +3,10 @@ import { modulesAdapter, semestersAdapter, timetableLoaded, updateModuleStates, 
 import { ModuleData, TimetableSnapshot } from "@/types/plannerTypes";
 import { AppDispatch, RootState } from ".";
 import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
+import {
+  createStarterTimetableState,
+  STARTER_TIMETABLE_NAME,
+} from "@/data/starterTimetable";
 
 export interface Timetable {
   name: string;
@@ -19,9 +23,6 @@ const timetableAdapter = createEntityAdapter({
   selectId: (t: Timetable) => t.name,
 });
 
-const emptyModules: EntityState<ModuleData, string> = { ids: [], entities: {} };
-const emptySemesters: EntityState<Semester, number> = { ids: [], entities: {} };
-
 const initialState: PlannerState = {
   timetables: timetableAdapter.getInitialState(),
   activeTimetableName: null,
@@ -31,15 +32,15 @@ export const plannerSlice = createSlice({
   name: "planner",
   initialState,
   reducers: {
-    // Called once on app init to ensure an empty timetable exists
+    // Called once on app init to ensure first-time visitors have an editable example.
     plannerInitialised: (state) => {
       if (state.timetables.ids.length === 0) {
+        const starterTimetable = createStarterTimetableState();
         timetableAdapter.addOne(state.timetables, {
-          name: "New Timetable",
-          modules: emptyModules,
-          semesters: emptySemesters,
+          name: STARTER_TIMETABLE_NAME,
+          ...starterTimetable,
         });
-        state.activeTimetableName = "New Timetable";
+        state.activeTimetableName = STARTER_TIMETABLE_NAME;
       }
     },
 
@@ -135,7 +136,7 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
     const current = state.planner.activeTimetableName
 
     // Save the current working timetable (if one exists)
-    if (current) {
+    if (current && current !== nextName) {
       dispatch(
         timetableUpdated({
           name: current,
