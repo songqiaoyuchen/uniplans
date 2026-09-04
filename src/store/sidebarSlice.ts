@@ -3,12 +3,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from ".";
 
 interface SidebarState {
-  isOpen: boolean;
+  // null means the user has not chosen yet: open on desktop, closed on mobile.
+  isOpen: boolean | null;
   activeTab: number; // 0 = Details, 1 = Generate
 }
 
 const initialState: SidebarState = {
-  isOpen: false,
+  isOpen: null,
   activeTab: 0,
 };
 
@@ -17,7 +18,8 @@ const sidebarSlice = createSlice({
   initialState,
   reducers: {
     toggleSidebar: (state) => {
-      state.isOpen = !state.isOpen;
+      // The only default-open toggle is the desktop chevron.
+      state.isOpen = state.isOpen === null ? false : !state.isOpen;
     },
     openSidebar: (state) => {
       state.isOpen = true;
@@ -38,3 +40,8 @@ export default sidebarSlice.reducer;
 // --- selectors ---
 export const selectIsSidebarOpen = (state: RootState) => state.sidebar.isOpen;
 export const selectActiveTab = (state: RootState) => state.sidebar.activeTab;
+
+export const resolveSidebarOpen = (
+  storedIsOpen: boolean | null,
+  isMobile: boolean,
+): boolean => storedIsOpen ?? !isMobile;

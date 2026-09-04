@@ -10,13 +10,16 @@ import { memo } from "react";
 import { RootState } from "@/store";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+import { resolveSidebarOpen } from "@/store/sidebarSlice";
 
 function Timetable() {
   const semesterIds = useAppSelector(selectSemesterIds) as number[];
-  const isOpen = useAppSelector((state: RootState) => state.sidebar.isOpen);
+  const storedIsOpen = useAppSelector((state: RootState) => state.sidebar.isOpen);
   const isMinimalView = useAppSelector(selectIsMinimalView);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up("lg"));
+  const isOpen = resolveSidebarOpen(storedIsOpen, isMobile);
   
   const responsiveSidebarWidth = isLargeScreen ? 336 : SIDEBAR_WIDTH;
   const sidebarWidth = isOpen ? responsiveSidebarWidth : SIDEBAR_COLLAPSED_WIDTH;

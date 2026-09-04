@@ -2,6 +2,11 @@ import { createSlice, createEntityAdapter, PayloadAction, EntityState, createAsy
 import { modulesAdapter, semestersAdapter, timetableLoaded, updateModuleStates, type Semester } from "./timetableSlice";
 import { ModuleData, TimetableSnapshot } from "@/types/plannerTypes";
 import { AppDispatch, RootState } from ".";
+import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
+import {
+  createStarterTimetableState,
+  STARTER_TIMETABLE_NAME,
+} from "@/data/starterTimetable";
 
 export interface Timetable {
   name: string;
@@ -18,9 +23,6 @@ const timetableAdapter = createEntityAdapter({
   selectId: (t: Timetable) => t.name,
 });
 
-const emptyModules: EntityState<ModuleData, string> = { ids: [], entities: {} };
-const emptySemesters: EntityState<Semester, number> = { ids: [], entities: {} };
-
 const initialState: PlannerState = {
   timetables: timetableAdapter.getInitialState(),
   activeTimetableName: null,
@@ -30,15 +32,15 @@ export const plannerSlice = createSlice({
   name: "planner",
   initialState,
   reducers: {
-    // Called once on app init to ensure an empty timetable exists
+    // Called once on app init to ensure first-time visitors have an editable example.
     plannerInitialised: (state) => {
       if (state.timetables.ids.length === 0) {
+        const starterTimetable = createStarterTimetableState();
         timetableAdapter.addOne(state.timetables, {
-          name: "New Timetable",
-          modules: emptyModules,
-          semesters: emptySemesters,
+          name: STARTER_TIMETABLE_NAME,
+          ...starterTimetable,
         });
-        state.activeTimetableName = "New Timetable";
+        state.activeTimetableName = STARTER_TIMETABLE_NAME;
       }
     },
 
@@ -62,15 +64,25 @@ export const plannerSlice = createSlice({
       state,
       action: PayloadAction<{ oldName: string; newName: string }>
     ) => {
-      const timetable = state.timetables.entities[action.payload.oldName];
+      const { oldName, newName } = action.payload;
+      if (oldName === newName) return;
+
+      const timetable = state.timetables.entities[oldName];
       if (timetable) {
-        timetableAdapter.removeOne(state.timetables, action.payload.oldName);
+        const uniqueName = uniqueTimetableName(
+          newName,
+          state.timetables.ids as string[],
+          oldName,
+        );
+        if (uniqueName === oldName) return;
+
+        timetableAdapter.removeOne(state.timetables, oldName);
         timetableAdapter.addOne(state.timetables, {
           ...timetable,
-          name: action.payload.newName,
+          name: uniqueName,
         });
-        if (state.activeTimetableName === action.payload.oldName) {
-          state.activeTimetableName = action.payload.newName;
+        if (state.activeTimetableName === oldName) {
+          state.activeTimetableName = uniqueName;
         }
       }
     },
@@ -124,7 +136,7 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
     const current = state.planner.activeTimetableName
 
     // Save the current working timetable (if one exists)
-    if (current) {
+    if (current && current !== nextName) {
       dispatch(
         timetableUpdated({
           name: current,

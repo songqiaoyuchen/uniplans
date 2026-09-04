@@ -1,99 +1,127 @@
 import { Semester, NormalisedGraph } from '@/types/graphTypes';
-import { isModuleData } from './constants';
+import { isModuleData, isNofNode } from './constants';
 
 /**
- * Removes unnecessary modules from the timetable.
- * A module is kept if it is in the target set or if it is a prerequisite
- * (directly or indirectly) of a kept module.
+ * Removes scheduled modules that are not part of a concrete prerequisite
+ * witness for a target. For N-of-M nodes, only N satisfiable, distinct choices
+ * are retained; already-preserved or exempted choices are preferred.
  */
 export function cleanSemesters(
   semesters: Semester[],
   graph: NormalisedGraph,
-  targetModules: Set<string>
+  targetModules: Set<string>,
+  preservedModules: Set<string> = new Set(),
+  exemptedModules: Set<string> = new Set(),
 ): Semester[] {
-  const moduleCodeToId = new Map<string, string>();
-  const outgoingEdges = new Map<string, string[]>();
+  const codeToId = new Map<string, string>();
+  const children = new Map<string, string[]>();
 
-  // Build maps
   for (const [id, node] of Object.entries(graph.nodes)) {
-    if (isModuleData(node)) {
-      moduleCodeToId.set(node.code, id);
-    }
-    outgoingEdges.set(id, []);
+    children.set(id, []);
+    if (isModuleData(node)) codeToId.set(node.code, id);
   }
 
-  // In NormalisedGraph, edges are directed from Dependent -> Prerequisite
-  // (based on check.ts: "modules point TO their prerequisites")
   for (const edge of graph.edges) {
-    if (!outgoingEdges.has(edge.from)) {
-      outgoingEdges.set(edge.from, []);
-    }
-    outgoingEdges.get(edge.from)!.push(edge.to);
+    const nodeChildren = children.get(edge.from) ?? [];
+    nodeChildren.push(edge.to);
+    children.set(edge.from, nodeChildren);
   }
 
-  // Convert target modules to IDs
-  const targetNodeIds = new Set<string>();
-  for (const code of targetModules) {
-    const id = moduleCodeToId.get(code);
-    if (id) targetNodeIds.add(id);
-  }
+  const scheduledIds = new Set(
+    semesters
+      .flatMap((semester) => semester.moduleCodes)
+      .map((code) => codeToId.get(code))
+      .filter((id): id is string => Boolean(id)),
+  );
+  const preservedIds = new Set(
+    [...preservedModules]
+      .map((code) => codeToId.get(code))
+      .filter((id): id is string => Boolean(id)),
+  );
+  const exemptedIds = new Set(
+    [...exemptedModules]
+      .map((code) => codeToId.get(code))
+      .filter((id): id is string => Boolean(id)),
+  );
 
-  const prerequisiteSet = new Set<string>();
+  const memo = new Map<string, Set<string> | null>();
 
-  // Helper to add prerequisites recursively
-  const addPrerequisites = (nodeId: string) => {
-    const prereqs = outgoingEdges.get(nodeId) || [];
-    for (const prereqId of prereqs) {
-      if (!prerequisiteSet.has(prereqId)) {
-        prerequisiteSet.add(prereqId);
-        
-        const node = graph.nodes[prereqId];
-        // If it's not a module (i.e., it's a LogicNode), we must recurse immediately
-        // to find the underlying modules that satisfy it.
-        if (node && !isModuleData(node)) {
-          addPrerequisites(prereqId);
-        }
+  const findWitness = (nodeId: string, visiting = new Set<string>()): Set<string> | null => {
+    if (memo.has(nodeId)) return memo.get(nodeId) ?? null;
+    if (visiting.has(nodeId)) return null;
+
+    const node = graph.nodes[nodeId];
+    if (!node) return null;
+
+    const nextVisiting = new Set(visiting).add(nodeId);
+
+    if (isModuleData(node)) {
+      if (!scheduledIds.has(nodeId) && !exemptedIds.has(nodeId)) {
+        memo.set(nodeId, null);
+        return null;
       }
+
+      const witness = new Set<string>();
+      if (!exemptedIds.has(nodeId)) witness.add(nodeId);
+
+      for (const prerequisiteId of new Set(children.get(nodeId) ?? [])) {
+        const prerequisiteWitness = findWitness(prerequisiteId, nextVisiting);
+        if (!prerequisiteWitness) {
+          memo.set(nodeId, null);
+          return null;
+        }
+        prerequisiteWitness.forEach((id) => witness.add(id));
+      }
+
+      memo.set(nodeId, witness);
+      return witness;
     }
+
+    if (!isNofNode(node)) return null;
+
+    const candidates = [...new Set(children.get(nodeId) ?? [])]
+      .map((childId, index) => ({ childId, index, witness: findWitness(childId, nextVisiting) }))
+      .filter((candidate): candidate is { childId: string; index: number; witness: Set<string> } =>
+        candidate.witness !== null
+      )
+      .sort((left, right) => {
+        const leftCost = [...left.witness].filter((id) => !preservedIds.has(id)).length;
+        const rightCost = [...right.witness].filter((id) => !preservedIds.has(id)).length;
+        return leftCost - rightCost || left.witness.size - right.witness.size || left.index - right.index;
+      });
+
+    if (candidates.length < node.n) {
+      memo.set(nodeId, null);
+      return null;
+    }
+
+    const witness = new Set<string>();
+    for (const candidate of candidates.slice(0, node.n)) {
+      candidate.witness.forEach((id) => witness.add(id));
+    }
+    memo.set(nodeId, witness);
+    return witness;
   };
 
-  const newSemesters: Semester[] = [];
-  // Iterate backwards from the last semester
-  const reversedSemesters = [...semesters].reverse();
+  const retainedIds = new Set<string>(preservedIds);
+  for (const code of targetModules) {
+    const targetId = codeToId.get(code);
+    if (!targetId || !scheduledIds.has(targetId)) continue;
 
-  for (const semester of reversedSemesters) {
-    const keptModules: string[] = [];
-    
-    for (const moduleCode of semester.moduleCodes) {
-      const id = moduleCodeToId.get(moduleCode);
-      
-      // Always keep if it's explicitly in the target set (which includes preserved modules)
-      // This ensures preserved modules are kept even if they aren't in the graph
-      if (targetModules.has(moduleCode)) {
-        keptModules.push(moduleCode);
-        if (id) addPrerequisites(id);
-        continue;
-      }
-
-      if (id) {
-        const isTarget = targetNodeIds.has(id);
-        const isPrereq = prerequisiteSet.has(id);
-        
-        if (isTarget || isPrereq) {
-          keptModules.push(moduleCode);
-          // Add prerequisites for this kept module
-          addPrerequisites(id);
-        }
-      }
-    }
-    
-    if (keptModules.length > 0) {
-      newSemesters.push({
-        ...semester,
-        moduleCodes: keptModules
-      });
+    retainedIds.add(targetId);
+    for (const prerequisiteId of new Set(children.get(targetId) ?? [])) {
+      findWitness(prerequisiteId)?.forEach((id) => retainedIds.add(id));
     }
   }
 
-  return newSemesters.reverse();
+  return semesters
+    .map((semester) => ({
+      ...semester,
+      moduleCodes: semester.moduleCodes.filter((code) => {
+        if (preservedModules.has(code)) return true;
+        const id = codeToId.get(code);
+        return Boolean(id && retainedIds.has(id));
+      }),
+    }))
+    .filter((semester) => semester.moduleCodes.length > 0);
 }

@@ -42,6 +42,7 @@ export type LogicStatus = {
   satisfied: boolean;
   requires: number;
   satisfiedCount: number;
+  satisfiedChildren: Set<string>;
 };
 
 export type PlannerState = {
@@ -84,4 +85,10 @@ export interface ValidationResult {
     targetModulesCompleted: number;
     targetModulesTotal: number;
   };
+
 }
+export type TimetableGenerationResult = {
+  timetable: TimetableData;
+  isValid: boolean;
+  validation: ValidationResult;
+};

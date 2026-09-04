@@ -119,7 +119,7 @@ function findBestModule(
   targetModules: Set<string> // Now contains IDs
 ): string | null {
   let bestModule: string | null = null;
-  let bestImpact = -1;
+  let bestImpact = 0;
 
   for (const moduleId of available) {
     const impact = calculateValue(moduleId, plannerState, edgeMap, graph, targetModules);
@@ -274,27 +274,27 @@ export function updateLogicSatisfaction(
   graph: NormalisedGraph
 ): void {
   // Find parent logic nodes and start cascading updates
-  const parentLogics = edgeMap[selectedModuleId].in || [];
+  const parentLogics = edgeMap[selectedModuleId]?.in || [];
 
-  const toCheck = new Set(parentLogics);
+  const toCheck: Array<{ logicId: string; satisfiedChildId: string }> = parentLogics.map(
+    (logicId) => ({ logicId, satisfiedChildId: selectedModuleId })
+  );
 
-  while (toCheck.size > 0) {
-    // Get and remove first item
-    const iterator = toCheck.values();
-    const logicId = iterator.next().value as string;
-    toCheck.delete(logicId);
+  while (toCheck.length > 0) {
+    const { logicId, satisfiedChildId } = toCheck.shift()!;
 
     const logicStatus = plannerState.logicStatus[logicId];
     const logicNode = graph.nodes[logicId];
     
-    // If logic is already satisfied or not a logic node, skip
-    if (!logicStatus || logicStatus.satisfied || !isNofNode(logicNode)) {
+    // A threshold counts distinct direct children, never repeated notifications.
+    if (!logicStatus || !isNofNode(logicNode) || logicStatus.satisfiedChildren.has(satisfiedChildId)) {
       continue;
     }
 
-    logicStatus.satisfiedCount += 1;
+    logicStatus.satisfiedChildren.add(satisfiedChildId);
+    logicStatus.satisfiedCount = logicStatus.satisfiedChildren.size;
 
-    if (logicStatus.satisfiedCount >= logicStatus.requires) {
+    if (!logicStatus.satisfied && logicStatus.satisfiedCount >= logicStatus.requires) {
       logicStatus.satisfied = true;
       plannerState.satisfiedLogicNodes.add(logicId);
 
@@ -302,7 +302,7 @@ export function updateLogicSatisfaction(
       const grandparentLogics = edgeMap[logicId].in || [];
 
       for (const parentId of grandparentLogics) {
-        toCheck.add(parentId);
+        toCheck.push({ logicId: parentId, satisfiedChildId: logicId });
       }
     }
   }

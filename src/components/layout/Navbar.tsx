@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
@@ -10,18 +11,25 @@ import Menu from "@mui/material/Menu";
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Navlink from "../ui/Navlink";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
-import SwipeableDrawer from "@mui/material/SwipeableDrawer";
+import SpeedDial from "@mui/material/SpeedDial";
+import SpeedDialAction from "@mui/material/SpeedDialAction";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
+import Backdrop from "@mui/material/Backdrop";
+import CloseIcon from "@mui/icons-material/Close";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useThemeMode } from "@/providers/ThemeProvider";
 
 const pages = [
-  { name: "Home", href: "/" },
-  { name: "Planner", href: "/planner" },
-  { name: "Explore", href: "/explore" },
+  { name: "Home", href: "/", icon: <HomeOutlinedIcon /> },
+  {
+    name: "Planner",
+    href: "/planner",
+    icon: <CalendarMonthOutlinedIcon />,
+  },
+  { name: "Explore", href: "/explore", icon: <ExploreOutlinedIcon /> },
 ];
 
 const settings = ["Profile", "Account", "Logout"];
@@ -29,21 +37,35 @@ const settings = ["Profile", "Account", "Logout"];
 function Navbar() {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const router = useRouter();
   const { mode } = useThemeMode();
-
-  const toggleMobileNav = (open: boolean) => () => {
-    setMobileNavOpen(open);
-  };
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
 
   return (
-    <AppBar position="fixed" elevation={0} sx={{ height: "64px" }}>
+    <AppBar
+      position="fixed"
+      elevation={0}
+      sx={{
+        height: "64px",
+        zIndex: (theme) => theme.zIndex.drawer + 2,
+      }}
+    >
+      <Backdrop
+        open={mobileNavOpen}
+        onClick={() => setMobileNavOpen(false)}
+        sx={{
+          top: "64px",
+          zIndex: 0,
+        }}
+      />
       <Toolbar
         disableGutters
         sx={{
+          position: "relative",
+          zIndex: 1,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -88,53 +110,69 @@ function Navbar() {
             ))}
           </Box>
 
-          {/* Mobile Menu Icon */}
-          <IconButton
-            size="large"
-            onClick={toggleMobileNav(true)}
-            color="inherit"
-            sx={{ 
-              display: { xs: "flex", md: "none" },
-              borderRadius: 1.5,
-              "&:hover": { bgcolor: "action.hover" }
-            }}
-          >
-            <MenuIcon />
-          </IconButton>
-
-          {/* Mobile Drawer */}
-          <SwipeableDrawer
-            anchor="bottom"
-            open={mobileNavOpen}
-            onOpen={toggleMobileNav(true)}
-            onClose={toggleMobileNav(false)}
-            disableSwipeToOpen={true}
-            slotProps={{
-              paper: {
-                sx: {
-                  borderTopLeftRadius: "8px",
-                  borderTopRightRadius: "8px",
-                  boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.2)",
-                },
-              },
-            }}
+          {/* Mobile navigation */}
+          <ClickAwayListener
+            onClickAway={() => setMobileNavOpen(false)}
+            mouseEvent="onMouseDown"
+            touchEvent="onTouchStart"
           >
             <Box
-              sx={{ width: "100%" }}
-              role="presentation"
-              onClick={toggleMobileNav(false)}
+              sx={{
+                position: "relative",
+                display: { xs: "flex", md: "none" },
+              }}
             >
-              <List>
+              <IconButton
+                size="large"
+                onClick={() => setMobileNavOpen((open) => !open)}
+                color="inherit"
+                aria-label={mobileNavOpen ? "Close navigation" : "Open navigation"}
+                aria-expanded={mobileNavOpen}
+                aria-controls="Mobilenavigation-actions"
+                sx={{
+                  borderRadius: 1.5,
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                {mobileNavOpen ? <CloseIcon /> : <MenuIcon />}
+              </IconButton>
+
+              <SpeedDial
+                ariaLabel="Mobile navigation"
+                direction="down"
+                open={mobileNavOpen}
+                onClose={() => setMobileNavOpen(false)}
+                FabProps={{
+                  "aria-hidden": true,
+                  tabIndex: -1,
+                  sx: { display: "none" },
+                }}
+                sx={{
+                  position: "absolute",
+                  top: "60px",
+                  left: -4,
+                  "& .MuiSpeedDial-actions": {
+                    mt: "0 !important",
+                    pt: 0,
+                  },
+                }}
+              >
                 {pages.map((page) => (
-                  <ListItem key={page.name} disablePadding>
-                    <ListItemButton component="a" href={page.href}>
-                      <ListItemText primary={page.name} />
-                    </ListItemButton>
-                  </ListItem>
+                  <SpeedDialAction
+                    key={page.name}
+                    icon={page.icon}
+                    tooltipTitle={page.name}
+                    tooltipOpen={mobileNavOpen}
+                    tooltipPlacement="right"
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      router.push(page.href);
+                    }}
+                  />
                 ))}
-              </List>
+              </SpeedDial>
             </Box>
-          </SwipeableDrawer>
+          </ClickAwayListener>
         </Box>
 
         {/* Mobile Title (Centered) */}

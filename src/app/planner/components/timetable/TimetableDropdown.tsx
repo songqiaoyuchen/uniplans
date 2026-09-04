@@ -30,6 +30,7 @@ import { cloneEntityState } from "@/utils/cloneEntityState";
 import { serializeTimetable } from "@/utils/planner/shareTimetable";
 import { useMemo, useState } from "react";
 import ImportTimetableDialog from "./ImportTimetableDialog";
+import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
 
 const TimetableDropdown: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,13 +59,7 @@ const TimetableDropdown: React.FC = () => {
   const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
 
-  const existingNames = useMemo(() => new Set(allIds), [allIds]);
-  const uniqueName = (base: string) => {
-    if (!existingNames.has(base)) return base;
-    let i = 2;
-    while (existingNames.has(`${base} ${i}`)) i++;
-    return `${base} ${i}`;
-  };
+  const uniqueName = (base: string) => uniqueTimetableName(base, allIds);
 
   const onSwitch = (name: string) => {
     if (name !== activeName) {

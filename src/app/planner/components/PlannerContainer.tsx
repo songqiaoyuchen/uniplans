@@ -19,6 +19,8 @@ import {
 
 import Sidebar from "./sidebar";
 import Box from "@mui/material/Box";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import Timetable from "./timetable";
 import ModuleCard from "./timetable/ModuleCard";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -29,6 +31,9 @@ import MiniModuleCard from "./timetable/MiniModuleCard";
 import { useSearchParams } from "next/navigation";
 import { importTimetableFromSnapshot } from "@/store/plannerSlice";
 import { TimetableSnapshot } from "@/types/plannerTypes";
+import { closeSidebar } from "@/store/sidebarSlice";
+import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
+import { apiSlice } from "@/store/apiSlice";
 
 const PlannerContainer: React.FC = () => {
   const sensors = useSensors(
@@ -41,6 +46,8 @@ const PlannerContainer: React.FC = () => {
   const [draggingModuleCode, setDraggingModuleCode] = useState<string | null>(null);
   const { mod: draggingModule, isPlanned } = useModuleState(draggingModuleCode);
   const isMinimalView = useAppSelector((state) => state.timetable.isMinimalView);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
@@ -48,12 +55,10 @@ const PlannerContainer: React.FC = () => {
 
   // helper to ensure an import name doesn't collide with existing ones
   const existingTimetableNames = useAppSelector((s) => s.planner.timetables.ids);
-  const uniqueImportName = useCallback((base: string) => {
-    if (!existingTimetableNames.includes(base)) return base;
-    let i = 2;
-    while (existingTimetableNames.includes(`${base} ${i}`)) i++;
-    return `${base} ${i}`;
-  }, [existingTimetableNames]);
+  const uniqueImportName = useCallback(
+    (base: string) => uniqueTimetableName(base, existingTimetableNames as string[]),
+    [existingTimetableNames],
+  );
 
   useEffect(() => {
     if (!snapshotId) return;
@@ -80,6 +85,10 @@ const PlannerContainer: React.FC = () => {
   
   const handleDragStart = (event: DragStartEvent) => {
     setDraggingModuleCode(event.active.id.toString().split('-')[0]);
+
+    if (isMobile && event.active.data.current?.source === "sidebar") {
+      dispatch(closeSidebar());
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -98,18 +107,26 @@ const PlannerContainer: React.FC = () => {
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
+  const clearDragState = () => {
     setDraggingModuleCode(null);
     dispatch(semesterDraggedOverCleared());
+  };
+
+  const handleDragCancel = () => {
+    clearDragState();
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    clearDragState();
 
     if (!over || active.id === over.id) return;
 
-    const [draggingModuleCode, source] = (active.id as string).split('-');
+    const [moduleCode, source] = (active.id as string).split('-');
 
     if (over?.id === "delete-zone") {
-      dispatch(moduleRemoved({ moduleCode: draggingModuleCode }));
+      dispatch(moduleRemoved({ moduleCode }));
       return;
     }
 
@@ -118,8 +135,22 @@ const PlannerContainer: React.FC = () => {
 
     // Sidebar drop
     if (source === "sidebar") {
-      if (typeof destSemesterId !== "number" || !draggingModule) return;
-      dispatch(moduleAdded({ module: draggingModule, destSemesterId }));
+      if (typeof destSemesterId !== "number") return;
+      let moduleData = draggingModule?.code === moduleCode ? draggingModule : null;
+
+      if (!moduleData) {
+        try {
+          moduleData = await dispatch(
+            apiSlice.endpoints.getModuleByCode.initiate(moduleCode, {
+              subscribe: false,
+            }),
+          ).unwrap();
+        } catch {
+          return;
+        }
+      }
+
+      dispatch(moduleAdded({ module: moduleData, destSemesterId }));
       return;
     }
 
@@ -135,14 +166,14 @@ const PlannerContainer: React.FC = () => {
       dispatch(
         moduleReordered({
           semesterId: sourceSemesterId,
-          activeModuleCode: draggingModuleCode,
+          activeModuleCode: moduleCode,
           overModuleCode,
         })
       );
     } else {
       dispatch(
         moduleMoved({
-          activeModuleCode: draggingModuleCode,
+          activeModuleCode: moduleCode,
           overModuleCode,
           sourceSemesterId,
           destSemesterId,
@@ -157,16 +188,21 @@ const PlannerContainer: React.FC = () => {
       <DndContext
         sensors={sensors}
         collisionDetection={rectIntersection}
+        autoScroll={{
+          canScroll: (element) =>
+            !element.hasAttribute("data-dnd-no-autoscroll"),
+        }}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
         <Sidebar />  
         <Timetable />
 
         {/* overlay modulecard */}
         {createPortal(
-          <DragOverlay>
+          <DragOverlay zIndex={theme.zIndex.drawer + 1}>
             {draggingModuleCode && draggingModule && (
               isMinimalView 
                 ? <MiniModuleCard module={draggingModule} isDragging/>
