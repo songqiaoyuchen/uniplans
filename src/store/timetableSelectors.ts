@@ -3,6 +3,7 @@ import { RootState } from ".";
 import { modulesAdapter, semestersAdapter } from "./timetableSlice";
 import { flattenPrereqTree } from "@/utils/planner/flattenPrereqTree";
 import { GRADE_VALUES } from "@/types/plannerTypes";
+import { matchesModuleCode } from '@/utils/prerequisites/evaluatePrerequisite';
 
 // --- selectors ---
 export const {
@@ -14,6 +15,7 @@ export const {
   selectById: selectModuleByCode,
 } = modulesAdapter.getSelectors((s: RootState) => s.timetable.modules);
 
+export const selectStudentContext = (state: RootState) => state.timetable.studentContext ?? null;
 export const selectSelectedModuleCode = (state: RootState) => state.timetable.selectedModuleCode;
 export const selectDraggedOverSemesterId = (state: RootState) => state.timetable.draggedOverSemesterId;
 export const selectIsMinimalView = (state: RootState) => state.timetable.isMinimalView;
@@ -166,20 +168,21 @@ export const makeIsModuleRelatedSelector = (code: string) =>
     [
       (state: RootState) => state.timetable.selectedModuleCode,
       (state: RootState) => state.timetable.modules.entities,
+      selectStudentContext,
     ],
-    (selectedCode, modules) => {
+    (selectedCode, modules, studentContext) => {
       if (!selectedCode || code === selectedCode) return false;
 
       const selectedModule = modules[selectedCode];
       if (!selectedModule) return false;
 
-      const forwardSet = flattenPrereqTree(selectedModule.requires);
+      const forwardSet = flattenPrereqTree(selectedModule.requires, studentContext);
 
-      const isForward = forwardSet.has(code);
+      const isForward = [...forwardSet].some(pattern => matchesModuleCode(pattern, code));
       const isReverse = Object.values(modules).some((mod) => {
         if (!mod?.requires) return false;
-        const prereqs = flattenPrereqTree(mod.requires);
-        return prereqs.has(selectedCode) && mod.code === code;
+        const prereqs = flattenPrereqTree(mod.requires, studentContext);
+        return [...prereqs].some(pattern => matchesModuleCode(pattern, selectedCode)) && mod.code === code;
       });
 
       return isForward || isReverse;

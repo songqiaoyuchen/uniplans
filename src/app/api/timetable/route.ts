@@ -5,6 +5,9 @@ import { runScheduler } from '@/utils/graph/algo/schedule';
 import { ErrorResponse } from '@/types/errorTypes';
 import { TimetableGenerationResult } from '@/types/graphTypes';
 import { validateTimetableRequest } from '@/utils/planner/validateTimetableRequest';
+import { resolvePrerequisiteConditions } from '@/utils/graph/resolvePrerequisiteConditions';
+import { GraphDataError } from '@/db/graphDataError';
+import { checkGraph } from '@/utils/graph/checkGraph';
 
 export async function POST(request: NextRequest): Promise<NextResponse<TimetableGenerationResult | ErrorResponse>> {
   let body: unknown;
@@ -26,6 +29,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
     useSpecialTerms,
     maxMcsPerSemester,
     preservedTimetable,
+    studentContext,
   } = validation.data;
 
   try {
@@ -39,7 +43,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
 
     // Build the dependency graph for the required modules
     const rawGraph = await getMergedTree(requiredModuleCodes);
-    const normalisedGraph = normaliseNodes(rawGraph);
+    const resolvedGraph = resolvePrerequisiteConditions(rawGraph, studentContext, requiredModuleCodes);
+    const normalisedGraph = normaliseNodes(resolvedGraph);
+    if (!checkGraph(normalisedGraph, requiredModuleCodes)) throw new GraphDataError('Prerequisite graph failed integrity checks');
 
     // Run the scheduler
     const result = runScheduler(
@@ -60,6 +66,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<Timetable
     }
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof GraphDataError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error('❌ Failed to generate timetable:', error);
     return NextResponse.json(
       { error: 'Failed to generate timetable' },

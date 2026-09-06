@@ -1,7 +1,9 @@
 // utils/planner/flattenPrereqTree.ts
 import { PrereqTree } from "@/types/plannerTypes";
+import type { StudentContext } from '@/types/prerequisiteTypes';
+import { resolvePrerequisite } from '@/utils/prerequisites/evaluatePrerequisite';
 
-export function flattenPrereqTree(tree: PrereqTree | undefined): Set<string> {
+export function flattenPrereqTree(tree: PrereqTree | null | undefined, context?: StudentContext | null): Set<string> {
   const result = new Set<string>();
   if (!tree) return result;
 
@@ -13,6 +15,7 @@ export function flattenPrereqTree(tree: PrereqTree | undefined): Set<string> {
     }
   }
 
-  traverse(tree);
+  const resolved = resolvePrerequisite(tree, context);
+  if (resolved) traverse(resolved);
   return result;
 }

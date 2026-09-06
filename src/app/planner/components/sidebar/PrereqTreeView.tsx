@@ -9,6 +9,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import type { PrereqTree } from "@/types/plannerTypes";
+import type { StudentContext } from '@/types/prerequisiteTypes';
+import { resolvePrerequisite } from '@/utils/prerequisites/evaluatePrerequisite';
 import { styled } from "@mui/material/styles";
 import SidebarModule from "./SidebarModule";
 import { memo } from "react";
@@ -16,11 +18,13 @@ import { useGetModuleSummariesQuery } from "@/store/apiSlice";
 
 interface PrereqTreeViewProps {
   prereqTree: PrereqTree;
+  studentContext?: StudentContext | null;
 }
 
 // Helper function to get all parent node IDs for default expansion
 const getAllParentIds = (node: PrereqTree, prefix = "0"): string[] => {
-  if (node.type === "module") {
+  if (node.type === 'conditional') return [prefix, ...getAllParentIds(node.then, `${prefix}-0`)];
+  if (!('children' in node)) {
     return [];
   }
   const childIds = node.children.flatMap((child, index) =>
@@ -39,14 +43,19 @@ const getPrerequisiteModuleCodes = (tree: PrereqTree): string[] => {
       if (!isModulePattern(node.moduleCode)) codes.add(node.moduleCode.toUpperCase());
       return;
     }
-    node.children.forEach(visit);
+    if (node.type === 'conditional') visit(node.then);
+    if ('children' in node) node.children.forEach(visit);
   };
 
   visit(tree);
   return [...codes].sort();
 };
 
-const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
+const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree: sourceTree, studentContext }) => {
+  const prereqTree = React.useMemo<PrereqTree>(
+    () => resolvePrerequisite(sourceTree, studentContext) ?? { type: 'constant', value: true },
+    [sourceTree, studentContext],
+  );
   const allParentIds = React.useMemo(
     () => getAllParentIds(prereqTree),
     [prereqTree],
@@ -136,12 +145,23 @@ const PrereqTreeView: React.FC<PrereqTreeViewProps> = ({ prereqTree }) => {
       );
     }
 
+    if (!('children' in node)) {
+      const text = node.type === 'blocked'
+        ? `${node.moduleCode ? `${node.moduleCode}: ` : ''}${node.reason}`
+        : node.type === 'constant'
+          ? node.value ? 'No additional prerequisite is required for this context.' : 'This prerequisite cannot be satisfied.'
+          : 'Set your admission cohort and programme in Generate to evaluate this condition.';
+      return <TreeItem key={idPath} itemId={idPath} label={
+        <Typography variant="body2" color={node.type === 'blocked' ? 'error.main' : 'text.secondary'}>{text}</Typography>
+      } />;
+    }
+
     const title =
       node.type === "AND"
         ? "All of the following:"
         : node.type === "OR"
           ? "At least 1 of:"
-          : `At least ${node.n} of:`;
+          : `At least ${'n' in node ? node.n : 1} of:`;
 
     return (
       <TreeItem

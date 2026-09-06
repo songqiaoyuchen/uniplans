@@ -41,11 +41,7 @@ export type RawSemesterInfo = {
   covidZones?: string[];
 };
 
-export type PrereqTree =
-  | string
-  | { and: PrereqTree[] }
-  | { or: PrereqTree[] }
-  | { nOf: [number, PrereqTree[]] };
+export type PrereqTree = import("./prerequisiteTypes").RawPrerequisiteNode;
 
 // Dictionary of module codes to their prerequisite trees
 export type Prerequisite = {

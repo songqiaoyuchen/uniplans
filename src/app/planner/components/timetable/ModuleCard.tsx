@@ -7,7 +7,6 @@ import Typography from "@mui/material/Typography";
 import { memo } from "react";
 import { useModuleCardColors } from "../../hooks";
 import Box from "@mui/material/Box";
-import Tag from "@/components/ui/Tag";
 import ModuleGradeDropdown from "./ModuleGradeDropdown";
 
 interface ModuleCardProps {

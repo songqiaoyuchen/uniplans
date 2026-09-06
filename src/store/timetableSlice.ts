@@ -1,5 +1,7 @@
 import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from '@reduxjs/toolkit';
 import { Grade, ModuleData, ModuleStatus } from "@/types/plannerTypes";
+import type { StudentContext } from '@/types/prerequisiteTypes';
+import { validateStudentContext } from '@/utils/prerequisites/validateStudentContext';
 import { RootState } from '.';
 import { apiSlice } from './apiSlice';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -17,6 +19,9 @@ export interface Semester {
 }
 
 export interface TimetableSliceState {
+  studentContext: StudentContext | null;
+  generationRequestId: string | null;
+  moduleStateRequestId: string | null;
   modules: EntityState<ModuleData, string>;
   semesters: EntityState<Semester, number>; 
   selectedModuleCode: string | null; // for Sidebar and TimetableModule
@@ -39,9 +44,29 @@ export const semestersAdapter = createEntityAdapter({
   selectId: (s: Semester) => s.id,
 });
 
+export function normalizeStudentContext(context: unknown): StudentContext | null {
+  const result = validateStudentContext(context);
+  return result.success ? result.data : null;
+}
+
+export function normalizeCachedModule(module: ModuleData): ModuleData {
+  if (module.prerequisiteSchemaVersion === 2) return module;
+  return {
+    ...module,
+    requires: {
+      type: 'blocked',
+      reason: 'Prerequisite information must be refreshed before this module can be checked.',
+      moduleCode: module.code,
+    },
+  };
+}
+
 const timetableSlice = createSlice({
   name: 'timetable',
   initialState: {
+    studentContext: null,
+    generationRequestId: null,
+    moduleStateRequestId: null,
     modules: modulesAdapter.getInitialState(),
     semesters: semestersAdapter.getInitialState(),
     selectedModuleCode: null,
@@ -56,14 +81,29 @@ const timetableSlice = createSlice({
     exemptedModules: [],
   } as TimetableSliceState,
   reducers: {
+    studentContextUpdated(state, action: PayloadAction<StudentContext | null>) {
+      const result = validateStudentContext(action.payload);
+      if (!result.success) return;
+      state.studentContext = result.data;
+      state.generationRequestId = null;
+      state.moduleStateRequestId = null;
+    },
+    generationInvalidated(state) {
+      state.generationRequestId = null;
+      state.moduleStateRequestId = null;
+    },
     timetableLoaded(
       state,
       action: PayloadAction<{
         modules: ModuleData[];
         semesters: Semester[];
+        studentContext?: StudentContext | null;
       }>
     ) {
-      modulesAdapter.setAll(state.modules, action.payload.modules);
+      state.studentContext = normalizeStudentContext(action.payload.studentContext);
+      state.generationRequestId = null;
+      state.moduleStateRequestId = null;
+      modulesAdapter.setAll(state.modules, action.payload.modules.map(normalizeCachedModule));
       semestersAdapter.setAll(state.semesters, action.payload.semesters);
       const scheduledCodes = new Set(action.payload.semesters.flatMap((semester) => semester.moduleCodes));
       state.exemptedModules = [...new Set(state.exemptedModules)].filter(
@@ -83,7 +123,7 @@ const timetableSlice = createSlice({
 
       const exists = state.modules.entities[module.code];
       if (!exists) { // defensive check
-        modulesAdapter.addOne(state.modules, module);
+        modulesAdapter.addOne(state.modules, normalizeCachedModule(module));
       }
 
       const semester = state.semesters.entities[destSemesterId];
@@ -103,7 +143,16 @@ const timetableSlice = createSlice({
 
       const exists = state.modules.entities[module.code];
       if (!exists) { // defensive check
-        modulesAdapter.addOne(state.modules, module);
+        modulesAdapter.addOne(state.modules, normalizeCachedModule(module));
+      } else if (module.prerequisiteSchemaVersion === 2) {
+        modulesAdapter.setOne(state.modules, {
+          ...module,
+          grade: exists.grade,
+          tags: exists.tags,
+          status: exists.status,
+          issues: exists.issues,
+          plannedSemester: exists.plannedSemester,
+        });
       }
     },
 
@@ -334,12 +383,25 @@ const timetableSlice = createSlice({
 
   extraReducers: (builder) => {
     // update status when modules moved / added
-    builder.addCase(updateModuleStates.fulfilled, (state, action) => {
-      modulesAdapter.updateMany(state.modules, action.payload);
+    builder.addCase(updateModuleStates.pending, (state, action) => {
+      state.moduleStateRequestId = action.meta.requestId;
     });
+    builder.addCase(updateModuleStates.fulfilled, (state, action) => {
+      if (state.moduleStateRequestId !== action.meta.requestId) return;
+      modulesAdapter.updateMany(state.modules, action.payload);
+      state.moduleStateRequestId = null;
+    });
+    builder.addMatcher(
+      apiSlice.endpoints.getTimetable.matchPending,
+      (state, action) => {
+        state.generationRequestId = action.meta.requestId;
+      }
+    );
     builder.addMatcher(
       apiSlice.endpoints.getTimetable.matchFulfilled,
       (state, action) => {
+        if (state.generationRequestId !== action.meta.requestId) return;
+        state.moduleStateRequestId = null;
         // Ensure there are no gaps in EVEN semester IDs (main terms).
         // Odd semester IDs (special terms) are optional and only included if present.
         const incoming = action.payload.timetable.semesters ?? [];
@@ -414,6 +476,8 @@ const timetableSlice = createSlice({
 });
 
 export const {
+  studentContextUpdated,
+  generationInvalidated,
   timetableLoaded,
   moduleAdded,
   moduleCached,
@@ -461,6 +525,7 @@ export const updateModuleStates = createAsyncThunk<
       semesterEntities: semesterEntities.entities,
       moduleEntities: moduleEntities.entities,
       exemptedModules: state.timetable.exemptedModules,
+      studentContext: state.timetable.studentContext,
     };
 
     const deltas = checkModuleStates(args);

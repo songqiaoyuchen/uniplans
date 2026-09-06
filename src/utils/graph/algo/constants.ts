@@ -3,7 +3,7 @@
  * Configuration constants and type guards for the scheduling algorithm.
  * Defines scheduling constraints, prioritization weights, and utility functions.
  */
-import { LogicNode } from "@/types/graphTypes";
+import { LogicNode, NofNode } from "@/types/graphTypes";
 import { ModuleData } from "@/types/plannerTypes";
 import { MAX_SCHEDULER_SEMESTER_ID } from "@/constants/plannerLimits";
 
@@ -11,7 +11,7 @@ import { MAX_SCHEDULER_SEMESTER_ID } from "@/constants/plannerLimits";
 export const MAX_SEMESTERS = MAX_SCHEDULER_SEMESTER_ID;
 
 // Type guards
-export function isNofNode(node: LogicNode | ModuleData | undefined): node is LogicNode {
+export function isNofNode(node: LogicNode | ModuleData | undefined): node is NofNode {
   return node !== undefined && 'type' in node && node.type === 'NOF';
 }
 

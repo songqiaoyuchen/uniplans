@@ -127,3 +127,35 @@ describe('validateSchedule exemptions', () => {
   });
 
 });
+
+describe('semester continuity warnings', () => {
+  function validateSemesters(ids: number[]) {
+    const graph: NormalisedGraph = {
+      nodes: Object.fromEntries(ids.map(id => [`module-${id}`, moduleNode(`module-${id}`, `TEST${id}`)])),
+      edges: [],
+    };
+    return validateSchedule({ semesters: ids.map(id => ({ id, moduleCodes: [`TEST${id}`] })) }, graph, ids.map(id => `TEST${id}`));
+  }
+
+  test.each([
+    { ids: [0, 2, 4, 6] },
+    { ids: [0, 1, 2, 4] },
+    { ids: [1, 2, 3, 4] },
+    { ids: [2, 4] },
+    { ids: [] },
+    { ids: [1] },
+  ])('does not warn when only optional special terms are absent: $ids', ({ ids }) => {
+    expect(validateSemesters(ids).warnings).toEqual([]);
+  });
+
+  test.each([
+    [0, 4],
+    [1, 3],
+    [0, 3],
+    [1, 4],
+    [3, 5],
+    [4, 8],
+  ])('still reports a missing regular semester between %i and %i', (previous, next) => {
+    expect(validateSemesters([previous, next]).warnings).toEqual([`Gap in semesters: ${previous} to ${next}`]);
+  });
+});

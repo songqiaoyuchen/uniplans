@@ -4,12 +4,13 @@
  * @created 2025-05-08
  */
 
-import { Session, Integer } from "neo4j-driver";
+import type { Integer } from "neo4j-driver";
+import type { Neo4jExecutor } from "./attachTree";
 
 // === Resolve one or more module IDs from a raw moduleCode (e.g., "CS2040", "CS2040%", "CS2040:D")
 export async function resolveModuleCodes(
   tree: string,
-  session: Session,
+  session: Neo4jExecutor,
 ): Promise<Integer[]> {
   let rawCode = tree.split(":")[0].toUpperCase();
   let moduleIds: Integer[] = [];
@@ -29,9 +30,5 @@ export async function resolveModuleCodes(
     moduleIds = res.records.map((r) => r.get("id"));
   }
 
-  if (moduleIds.length === 0) {
-    console.warn(`⚠️ No module found for moduleCode: ${rawCode}`);
-  }
-
-  return moduleIds;
+  return [...new Map(moduleIds.map((id) => [id.toString(), id])).values()];
 }

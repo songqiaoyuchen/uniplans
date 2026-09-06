@@ -4,20 +4,21 @@
  * @created 2025-05-08
  */
 
-import { Session, Integer } from "neo4j-driver";
+import type { Integer } from "neo4j-driver";
+import type { Neo4jExecutor } from "./attachTree";
 import { resolveModuleCodes } from "./resolveModuleCodes";
 
 // === Handle leaf case: a single string module prerequisite
 export async function handleLeaf(
   tree: string,
-  session: Session,
-): Promise<Integer | null> {
+  session: Neo4jExecutor,
+  ownerModuleCode?: string,
+): Promise<Integer> {
   // Resolve module node IDs that match the given moduleCode (handles % wildcards internally)
   const ids = await resolveModuleCodes(tree, session);
 
   if (ids.length === 0) {
-    console.warn(`⚠️ No module found for: ${tree}`);
-    return null;
+    return createBlockedRequirement(tree, session, ownerModuleCode);
   }
 
   // If it's a wildcard with multiple matches (e.g. "CS2040%"), create an OR logic gate
@@ -41,4 +42,23 @@ export async function handleLeaf(
   }
 
   return ids[0];
+}
+
+export async function createBlockedRequirement(
+  token: string,
+  executor: Neo4jExecutor,
+  ownerModuleCode?: string,
+): Promise<Integer> {
+  const result = await executor.run(
+    `CREATE (l:Logic {type: "BLOCKED", reason: $reason, moduleCode: $moduleCode,
+                      originalToken: $originalToken, ownerModuleCode: $ownerModuleCode})
+     RETURN id(l) AS logicId`,
+    {
+      reason: `Unavailable prerequisite ${token}${ownerModuleCode ? ` for ${ownerModuleCode}` : ""}`,
+      moduleCode: token.split(":")[0].toUpperCase(),
+      originalToken: token,
+      ownerModuleCode: ownerModuleCode ?? null,
+    },
+  );
+  return result.records[0].get("logicId");
 }

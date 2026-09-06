@@ -13,11 +13,14 @@ import {
   StaticModuleData,
 } from '@/types/plannerTypes';
 import { Semester } from '@/store/timetableSlice';
+import type { StudentContext } from '@/types/prerequisiteTypes';
+import { evaluatePrerequisite, resolvePrerequisite } from '@/utils/prerequisites/evaluatePrerequisite';
 
 export interface CheckModuleStatesArgs {
   semesterEntities: Record<number, Semester>;
   moduleEntities: Record<string, ModuleData>;
   exemptedModules: string[];
+  studentContext?: StudentContext | null;
 }
 export type ModuleUpdatePayload = {
   id: string;
@@ -27,7 +30,7 @@ export type ModuleUpdatePayload = {
 export function checkModuleStates(
   args: CheckModuleStatesArgs
 ): ModuleUpdatePayload[] {
-  const { semesterEntities, moduleEntities, exemptedModules } = args;
+  const { semesterEntities, moduleEntities, exemptedModules, studentContext } = args;
 
   // Map each planned module to its semester
   const moduleToSemester = new Map<string, number>();
@@ -76,47 +79,15 @@ export function checkModuleStates(
         issues = conflictMap.get(code) || [];
 
         // Always check for prereq satisfaction
-        const prereqSatisfied = !mod?.requires || evaluatePrereqTree(
-          mod.requires,
-          (prereqRaw) => {
-            const prereq = stripQualifier(prereqRaw);
-            // Support wildcard prerequisites like "EC%", "MA2*" etc.
-            if (hasWildcard(prereq)) {
-              for (const [seenCode, seenStatus] of Object.entries(modulesSeen)) {
-                if (
-                  matchesWildcard(prereq, seenCode) &&
-                  (seenStatus === ModuleStatus.Completed || seenStatus === ModuleStatus.Satisfied)
-                ) {
-                  return true;
-                }
-              }
-              return false;
-            }
-
-            const seen = modulesSeen[prereq];
-            return seen === ModuleStatus.Completed || seen === ModuleStatus.Satisfied;
-          },
-          (patternRaw) => {
-            const pattern = stripQualifier(patternRaw);
-            if (!hasWildcard(pattern)) {
-              const ok = modulesSeen[pattern];
-              return ok === ModuleStatus.Completed || ok === ModuleStatus.Satisfied ? 1 : 0;
-            }
-            let count = 0;
-            for (const [seenCode, seenStatus] of Object.entries(modulesSeen)) {
-              if (
-                matchesWildcard(pattern, seenCode) &&
-                (seenStatus === ModuleStatus.Completed || seenStatus === ModuleStatus.Satisfied)
-              ) {
-                count += 1;
-              }
-            }
-            return count;
-          }
-        );
+        // Support wildcard prerequisites like "EC%", "MA2*" etc.
+        const completedCodes = new Set(Object.entries(modulesSeen)
+          .filter(([, seenStatus]) => seenStatus === ModuleStatus.Completed || seenStatus === ModuleStatus.Satisfied)
+          .map(([seenCode]) => seenCode));
+        const prereqSatisfied = !mod.requires || evaluatePrereqTree(mod.requires, studentContext, completedCodes);
 
         if (!prereqSatisfied) {
           issues.push({ type: 'PrereqUnsatisfied' });
+          issues.push(...getPrerequisiteIssues(mod.requires!, studentContext, completedCodes));
         }
 
         // Decide status
@@ -237,6 +208,7 @@ function buildIssuesMap(
 
   for (const code of moduleToSemesterMap.keys()) {
     const mod = staticModulesData[code];
+    if (!mod) continue;
     const issues: ModuleIssue[] = [];
 
     const semId = moduleToSemesterMap.get(code)!;
@@ -272,52 +244,47 @@ function buildIssuesMap(
  */
 function evaluatePrereqTree(
   tree: PrereqTree,
-  isSatisfied: (code: string) => boolean,
-  countMatches: (code: string) => number
+  context: StudentContext | null | undefined,
+  completedCodes: ReadonlySet<string>
 ): boolean {
-  switch (tree.type) {
-  case 'module':
-    return isSatisfied(tree.moduleCode);
-  case 'AND':
-    return tree.children.every(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
-  case 'OR':
-    return tree.children.some(ch => evaluatePrereqTree(ch, isSatisfied, countMatches));
-  case 'NOF': {
-    // Count satisfied children; wildcard module children count all matching satisfied modules
-    let count = 0;
-    for (const ch of tree.children) {
-      if (ch.type === 'module' && hasWildcard(stripQualifier(ch.moduleCode))) {
-        count += countMatches(ch.moduleCode);
-      } else {
-        count += evaluatePrereqTree(ch, isSatisfied, countMatches) ? 1 : 0;
-      }
-    }
-    return count >= (tree.n ?? 1);
-  }
-  default:
-    return false;
-  }
+  // Count satisfied children; wildcard module children count all matching satisfied modules
+  return evaluatePrerequisite(normalizePrerequisiteTokens(tree), context, completedCodes);
 }
 
 /**
  * Wildcard helpers: support '%' (SQL-like) and '*' as multi-char wildcards.
  * Examples: 'EC%' matches 'EC3303', 'MA2*' matches 'MA2101'.
  */
-function hasWildcard(pattern: string): boolean {
-  return pattern.includes('%') || pattern.includes('*');
-}
-
-function matchesWildcard(pattern: string, candidate: string): boolean {
+function normalizePrerequisiteTokens(tree: PrereqTree): PrereqTree {
   // Escape regex special chars except our wildcards
-  const escaped = pattern
-    .replace(/[.+^${}()|\[\]\\]/g, '\\$&')
-    .replace(/[%\*]/g, '.*');
-  const re = new RegExp(`^${escaped}$`, 'i');
-  return re.test(candidate);
+  if (tree.type === 'module') {
+    return { ...tree, moduleCode: stripQualifier(tree.moduleCode).replace(/\*/g, '%') };
+  }
+  if (tree.type === 'conditional') return { ...tree, then: normalizePrerequisiteTokens(tree.then) };
+  if ('children' in tree) return { ...tree, children: tree.children.map(normalizePrerequisiteTokens) };
+  return tree;
 }
 
 // Remove trailing grade/qualifier like ':D', ':C' from prerequisite tokens
 function stripQualifier(token: string): string {
   const idx = token.indexOf(':');
   return idx >= 0 ? token.slice(0, idx) : token;
+}
+
+function getPrerequisiteIssues(
+  tree: PrereqTree | null,
+  context: StudentContext | null | undefined,
+  completedCodes: ReadonlySet<string>
+): ModuleIssue[] {
+  if (!tree || evaluatePrereqTree(tree, context, completedCodes)) return [];
+  if (tree.type === 'blocked') {
+    return [{ type: 'PrerequisiteUnavailable', message: tree.moduleCode ? `${tree.moduleCode}: ${tree.reason}` : tree.reason }];
+  }
+  if (tree.type === 'condition' || tree.type === 'conditional') {
+    const condition = resolvePrerequisite({ type: 'condition', condition: tree.condition }, context);
+    if (condition?.type === 'blocked') return [{ type: 'PrerequisiteContext', message: condition.reason }];
+    return tree.type === 'conditional' ? getPrerequisiteIssues(tree.then, context, completedCodes) : [];
+  }
+  if ('children' in tree) return tree.children.flatMap(child => getPrerequisiteIssues(child, context, completedCodes));
+  return [];
 }

@@ -11,7 +11,7 @@ import { memo } from "react";
 import TargetedButton from "./TargetedButton";
 import ExemptedButton from "./ExemptedButton";
 import { useAppSelector } from "@/store";
-import { RootState } from "@/store";
+import { selectStudentContext } from '@/store/timetableSelectors';
 
 interface ModuleDetailsProps {
   module: ModuleData;
@@ -19,6 +19,7 @@ interface ModuleDetailsProps {
 }
 
 const ModuleDetails: React.FC<ModuleDetailsProps> = ({ module, isPlanned }) => {
+  const studentContext = useAppSelector(selectStudentContext);
 
   return (
     <Box
@@ -92,7 +93,7 @@ const ModuleDetails: React.FC<ModuleDetailsProps> = ({ module, isPlanned }) => {
           <Typography variant="subtitle1" fontWeight={600}>
             Prerequisites
           </Typography>
-          <PrereqTreeView prereqTree={module.requires} />
+          <PrereqTreeView prereqTree={module.requires} studentContext={studentContext} />
           <Divider flexItem sx={{ my: 1.5 }} />
         </>
       )}
@@ -154,6 +155,9 @@ function formatSemesters(semesters: SemesterLabel[]): string {
 
 function renderIssue(issue: ModuleIssue): string {
   switch (issue.type) {
+  case "PrerequisiteContext":
+  case "PrerequisiteUnavailable":
+    return issue.message;
   case "PrereqUnsatisfied":
     return "Prerequisites not satisfied.";
   case "Precluded":

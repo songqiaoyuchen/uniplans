@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type SyntheticEvent } from "react";
 import Fuse from "fuse.js";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -36,7 +36,7 @@ const ModuleSearch = () => {
       .slice(0, 15);
   }, [fuse, query]);
 
-  const handleSearch = async (_: any, mod: MiniModuleData | null) => {
+  const handleSearch = async (_: SyntheticEvent, mod: MiniModuleData | null) => {
     if (!mod) return;
 
     setQuery("");

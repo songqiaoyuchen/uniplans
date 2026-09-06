@@ -28,6 +28,14 @@ export function checkGraph(
   const requiredSet = new Set(requiredCodes);
 
   for (const [id, node] of Object.entries(graph.nodes)) {
+    if (node.id !== id) {
+      console.warn(`Graph node identity mismatch: ${id}`);
+      valid = false;
+    }
+    if ("type" in node && (node.type !== "NOF" || !Number.isSafeInteger(node.n) || node.n < 1 || (node.blockedReason && (outgoing[id]?.length ?? 0) > 0))) {
+      console.warn(`Invalid prerequisite gate: ${id}`);
+      valid = false;
+    }
     const inCount = (incoming[id] ?? []).length;
     const outCount = (outgoing[id] ?? []).length;
 

@@ -13,6 +13,8 @@ import { mapGraph } from "@/utils/graph/mapGraph";
 import type { Node as NeoNode, Relationship as NeoRel } from "neo4j-driver";
 import { getNeo4jDriver } from "./neo4j";
 import { FormattedGraph } from "@/types/graphTypes";
+import { checkImportMetadata } from "./checkImportMetadata";
+import { GraphDataError } from "./graphDataError";
 
 export async function getPrereqTree(
   moduleCode: string,
@@ -21,6 +23,7 @@ export async function getPrereqTree(
   const session = driver.session(); 
 
   try {
+    const publicationId = await checkImportMetadata(session);
     const result = await session.run(
       `
       MATCH (m:Module {moduleCode: $code})
@@ -33,6 +36,9 @@ export async function getPrereqTree(
       { code: moduleCode },
     );
 
+    if (await checkImportMetadata(session) !== publicationId) {
+      throw new GraphDataError("Prerequisite graph changed during retrieval; retry generation");
+    }
     const record = result.records[0];
     if (!record) return null;
 

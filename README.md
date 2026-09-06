@@ -37,7 +37,7 @@ Targets and exemptions are mutually exclusive: the most recent choice wins. The 
 
 Plans are saved in the current browser using local storage. Clearing site data or moving to another browser will remove local plans.
 
-The timetable menu lets you create or duplicate plans. **Share** creates a snapshot in Supabase and copies an import link to the clipboard. Shared snapshots contain the semester layout and module tags; grades are not included.
+The timetable menu lets you create or duplicate plans. **Share** creates a snapshot in Supabase and copies an import link to the clipboard. Shared snapshots contain the semester layout and module tags; grades and student context are not included. Admission cohort and programme category are saved privately with each local timetable, copied when duplicating it, and left unset when importing a shared snapshot. Set them in the Generate panel to evaluate conditional prerequisites.
 
 ## Tech Stack
 
@@ -109,13 +109,30 @@ The planner keeps its working state in Redux and persists it locally. Route hand
 
    The key and Row Level Security policy used by the app must permit the server to insert and read this table. Choose policies appropriate for your deployment before exposing it publicly.
 
-4. Populate Neo4j:
+4. Validate the bundled catalogue before populating Neo4j:
 
    ```bash
-   npm run resetDB
+   npm run resetDB -- --dry-run --source local
    ```
 
-   **Warning:** `resetDB` deletes the existing graph before rebuilding it and downloads module data from NUSMods. Use it only against the intended database, and do not repeatedly run the scraper.
+   This is also the default behavior of `npm run resetDB`: it does not connect to Neo4j or overwrite catalogue files. Unavailable prerequisites are reported and retained as blocked paths, not silently discarded.
+
+   For a new, empty database, initialize one publication lock anchor under exclusive maintenance:
+
+   ```cypher
+   MERGE (metadata:ImportMetadata {name: 'prerequisites'})
+   ON CREATE SET metadata.status = 'uninitialized';
+   ```
+
+   After reviewing the preflight report, verifying the destination, and backing up any existing graph, explicitly publish:
+
+   ```bash
+   npm run resetDB -- --apply --source local
+   ```
+
+   **Warning:** `--apply` replaces the application's Module/Logic graph in one transaction. Failures before commit roll back; a lost commit acknowledgement requires checking the publication metadata. Do not run this against an unapproved database. Generation refuses old graph schemas or catalogue fingerprints that do not match the deployed app.
+
+   `npm run resetDB -- --help` describes prepared-snapshot and download options. Downloads require an explicit staging file outside `src/data`; they do not update the deployed app's static catalogue. Deploy matching catalogue data separately, and do not repeatedly run the scraper.
 
 5. Start the development server:
 
@@ -143,7 +160,7 @@ npm run build
 | `npm run build` | Create and validate a production build. |
 | `npm start` | Serve a completed production build. |
 | `npm run lint` | Run ESLint over the application source. |
-| `npm run resetDB` | Destructively rebuild the Neo4j module graph. |
+| `npm run resetDB` | Validate the local catalogue without connecting to Neo4j; publication requires explicit `--apply`. |
 
 ### Timetable API guardrails
 
@@ -156,6 +173,7 @@ npm run build
 | `specialTerms` | Boolean |
 | `maxMcs` | Even integer from 16 to 40 |
 | `preservedTimetable` | Semester IDs 0–20, with at most 50 modules per semester |
+| `studentContext` | Optional object with nullable four-digit integer `cohortYear` and supported `programmeType`; unset facts block only dependent prerequisite paths |
 
 A module cannot be both targeted and exempted. Successful responses include the proposed timetable plus scheduler validation errors, warnings, and statistics; callers should check `isValid` before treating a proposal as valid.
 

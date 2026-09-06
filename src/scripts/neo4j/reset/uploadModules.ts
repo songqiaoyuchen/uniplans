@@ -1,53 +1,36 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
-import { Session } from "neo4j-driver";
-import { Neo4jModuleData } from "@/types/neo4jTypes";
+import type { Neo4jModuleData } from "../../../types/neo4jTypes";
+import type { Neo4jExecutor } from "./buildTree/attachTree";
 
-export async function uploadModules(session: Session): Promise<void> {
-  const filePath = path.join(process.cwd(), "src", "data", "moduleData.json");
-  const moduleList: Neo4jModuleData[] = JSON.parse(
-    fs.readFileSync(filePath, "utf8"),
+export async function uploadModules(executor: Neo4jExecutor, modules?: Neo4jModuleData[]): Promise<void> {
+  const moduleList: Neo4jModuleData[] = modules ?? JSON.parse(
+    await fs.readFile(path.join(process.cwd(), "src", "data", "moduleData.json"), "utf8"),
   );
-
-  try {
-    const tx = session.beginTransaction();
-
-    for (const mod of moduleList) {
-      await tx.run(
-        `MERGE (m:Module {moduleCode: $moduleCode})
-         SET m.title = $title,
-             m.description = $description,
-             m.moduleCredit = $moduleCredit,
-             m.department = $department,
-             m.faculty = $faculty,
-             m.workload = $workload,
-             m.gradingBasisDescription = $gradingBasisDescription,
-             m.prerequisite = $prerequisite,
-             m.preclusion = $preclusion,
-             m.attributes = $attributes,
-             m.semesterData = $semesterData`,
-        {
-          moduleCode: mod.moduleCode,
-          title: mod.title,
-          description: mod.description,
-          moduleCredit: mod.moduleCredit,
-          department: mod.department,
-          faculty: mod.faculty,
-          workload: mod.workload ?? [],
-          gradingBasisDescription: mod.gradingBasisDescription ?? null,
-          prerequisite: mod.prerequisite ?? null,
-          preclusion: mod.preclusion ?? null,
-          attributes: JSON.stringify(mod.attributes ?? {}), // Neo4j node properties can only hold primitive values or arrays of primitives
-          semesterData: JSON.stringify(mod.semesterData ?? []),
-        },
-      );
-
-      console.log(`✅ Uploaded ${mod.moduleCode}`);
+  for (let offset = 0; offset < moduleList.length; offset += 250) {
+    const rows = moduleList.slice(offset, offset + 250).map((mod) => ({
+      moduleCode: mod.moduleCode,
+      title: mod.title ?? null,
+      description: mod.description ?? null,
+      moduleCredit: mod.moduleCredit ?? null,
+      department: mod.department ?? null,
+      faculty: mod.faculty ?? null,
+      workload: mod.workload ?? [],
+      gradingBasisDescription: mod.gradingBasisDescription ?? null,
+      prerequisite: mod.prerequisite ?? null,
+      preclusion: mod.preclusion ?? null,
+      attributes: JSON.stringify(mod.attributes ?? {}), // Neo4j node properties can only hold primitive values or arrays of primitives
+      semesterData: JSON.stringify(mod.semesterData ?? []),
+    }));
+    const result = await executor.run(
+      `UNWIND $rows AS row
+       MERGE (m:Module {moduleCode: row.moduleCode})
+       SET m += row
+       RETURN count(m) AS uploadedCount`,
+      { rows },
+    );
+    if (result.records.length !== 1 || Number(result.records[0].get("uploadedCount")) !== rows.length) {
+      throw new Error(`Incomplete module upload at batch offset ${offset}`);
     }
-
-    await tx.commit();
-    console.log(`🎉 Uploaded ${moduleList.length} modules.`);
-  } catch (err) {
-    console.error("❌ Error during module upload:", err);
   }
 }

@@ -18,12 +18,12 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import EditIcon from "@mui/icons-material/Edit";
-import { resolveSidebarOpen, toggleSidebar } from "@/store/sidebarSlice";
+import { closeSidebar, openSidebar, resolveSidebarOpen } from "@/store/sidebarSlice";
 import CheckIcon from "@mui/icons-material/Check";
 import { useAppSelector } from "@/store";
 import { minimalViewToggled } from "@/store/timetableSlice";
 import { useDispatch } from "react-redux";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   selectCgpa,
   selectLatestNormalSemester,
@@ -46,7 +46,11 @@ const TimetableHeader: React.FC = () => {
   // Title editing mirrors active timetable name
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(activeName);
-  useEffect(() => setTempName(activeName), [activeName]);
+  const [previousName, setPreviousName] = useState(activeName);
+  if (previousName !== activeName) {
+    setPreviousName(activeName);
+    setTempName(activeName);
+  }
 
   const totalCredits = useAppSelector(selectTotalCredits);
   const Cgpa = useAppSelector(selectCgpa);
@@ -265,7 +269,7 @@ const TimetableHeader: React.FC = () => {
           <Tooltip title={sidebarIsOpen ? "Close sidebar" : "Open sidebar"}>
             <IconButton
               size="small"
-              onClick={() => dispatch(toggleSidebar())}
+              onClick={() => dispatch(sidebarIsOpen ? closeSidebar() : openSidebar())}
               aria-label={sidebarIsOpen ? "Close module search" : "Search modules"}
               sx={{
                 backgroundColor: "primary.main",

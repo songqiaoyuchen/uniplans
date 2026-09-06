@@ -1,12 +1,17 @@
 // src/types/graphTypes.ts
 
 import { ModuleData } from "./plannerTypes";
+import type { PrerequisiteCondition } from "./prerequisiteTypes";
 
-export type LogicNode = OrNode | AndNode | NofNode;
+export type LogicNode = OrNode | AndNode | NofNode | ConditionNode | ConditionalNode | ConstantNode | BlockedNode;
 
 export type OrNode = { id: string; type: "OR" };
 export type AndNode = { id: string; type: "AND" };
-export type NofNode = { id: string; type: "NOF"; n: number };
+export type NofNode = { id: string; type: "NOF"; n: number; blockedReason?: string };
+export type ConditionNode = { id: string; type: "CONDITION"; condition: PrerequisiteCondition };
+export type ConditionalNode = { id: string; type: "CONDITIONAL"; condition: PrerequisiteCondition };
+export type ConstantNode = { id: string; type: "CONSTANT"; value: boolean };
+export type BlockedNode = { id: string; type: "BLOCKED"; reason: string; moduleCode?: string };
 
 export type Edge = {
   id: string;

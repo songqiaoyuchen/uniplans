@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { fetchNormalisedGraph } from "@/services/planner/fetchGraph";
 import NormalisedGraphViewer from "./NormalisedGraphViewer";
 import { plannerSelectors } from "@/store/plannerSlice";
+import type { RootState } from "@/store";
 
 // MUI Imports
 import CircularProgress from "@mui/material/CircularProgress";
@@ -25,7 +26,10 @@ export default function GraphPage() {
 
   const [neo4jData, setNeo4jData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false); // Added generic error tracking for UI
+  const [error, setError] = useState<string | null>(null); // Added generic error tracking for UI
+  const studentContext = useSelector((state: RootState) => state.timetable.studentContext);
+  const cohortYear = studentContext?.cohortYear ?? null;
+  const programmeType = studentContext?.programmeType ?? null;
 
   // Create a stable "signature" of all modules in timetable to auto-refresh
   const moduleSignature = activeTimetable
@@ -47,23 +51,27 @@ export default function GraphPage() {
       .map((s) => s.split(":")[0])
       .filter(Boolean);
 
+    let cancelled = false;
     const fetchGraph = async () => {
       setLoading(true);
-      setError(false);
+      setError(null);
       try {
-        const data = await fetchNormalisedGraph(moduleCodes);
-        setNeo4jData(data);
+        const data = await fetchNormalisedGraph(moduleCodes, { cohortYear, programmeType });
+        if (!cancelled) setNeo4jData(data);
       } catch (err) {
         console.error("❌ Error fetching graph:", err);
-        setNeo4jData(null);
-        setError(true);
+        if (!cancelled) {
+          setNeo4jData(null);
+          setError(err instanceof Error ? err.message : "Unable to load prerequisite graph");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchGraph();
-  }, [moduleSignature]);
+    return () => { cancelled = true; };
+  }, [moduleSignature, cohortYear, programmeType]);
 
   // --- Render Helpers ---
 
@@ -111,7 +119,7 @@ export default function GraphPage() {
     if (error) {
       return (
         <Alert severity="error">
-          Failed to load graph data. Please check your connection or try again later.
+          {error}
         </Alert>
       );
     }

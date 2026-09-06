@@ -74,6 +74,7 @@ export async function getModuleByCode(
     description: rawModule.description,
     faculty: rawModule.faculty,
     department: rawModule.department,
+    prerequisiteSchemaVersion: 2,
   };
 
   // Fetch and attach prerequisites

@@ -273,7 +273,7 @@ function AppWindowVideo({ src, poster, glowColor = "#a78bfa" }: { src: string, p
         ([entry]) => {
           if (entry.isIntersecting) {
             setIsVisible(true);
-            observer && observer.disconnect();
+            observer?.disconnect();
           }
         },
         { threshold: 0.15 }
@@ -284,7 +284,7 @@ function AppWindowVideo({ src, poster, glowColor = "#a78bfa" }: { src: string, p
       setIsVisible(true);
     }
     return () => {
-      observer && observer.disconnect();
+      observer?.disconnect();
     };
   }, []);
 

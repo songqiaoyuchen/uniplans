@@ -1,5 +1,6 @@
 import type { TimetableGenerationResult } from '@/types/graphTypes';
 import type { MiniModuleData, ModuleData } from '@/types/plannerTypes';
+import type { StudentContext } from '@/types/prerequisiteTypes';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const apiSlice = createApi({
@@ -22,7 +23,7 @@ export const apiSlice = createApi({
       keepUnusedDataFor: Number.MAX_VALUE,
     }),
 
-    getTimetable: builder.query<TimetableGenerationResult, { requiredModuleCodes: string[]; exemptedModuleCodes: string[]; useSpecialTerms?: boolean; maxMcsPerSemester?: number; preserveTimetable?: boolean; preservedData?: Record<number, string[]> }> ({
+    getTimetable: builder.query<TimetableGenerationResult, { requiredModuleCodes: string[]; exemptedModuleCodes: string[]; useSpecialTerms?: boolean; maxMcsPerSemester?: number; preserveTimetable?: boolean; preservedData?: Record<number, string[]>; studentContext?: StudentContext | null; clientTimetableName?: string | null }> ({
       query: (args) => ({
         url: '/api/timetable',
         method: 'POST',
@@ -31,7 +32,8 @@ export const apiSlice = createApi({
           exempted: args.exemptedModuleCodes,
           specialTerms: args.useSpecialTerms,
           maxMcs: args.maxMcsPerSemester,
-          preservedTimetable: args.preservedData
+          preservedTimetable: args.preservedData,
+          studentContext: args.studentContext
         }
       }),
     }),

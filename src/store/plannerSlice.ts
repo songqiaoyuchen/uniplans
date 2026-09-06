@@ -1,7 +1,8 @@
-import { createSlice, createEntityAdapter, PayloadAction, EntityState, createAsyncThunk } from "@reduxjs/toolkit";
-import { modulesAdapter, semestersAdapter, timetableLoaded, updateModuleStates, type Semester } from "./timetableSlice";
+import { createSlice, createEntityAdapter, PayloadAction, EntityState, createAsyncThunk, type ThunkAction, type UnknownAction } from "@reduxjs/toolkit";
+import { modulesAdapter, normalizeStudentContext, semestersAdapter, timetableLoaded, updateModuleStates, type Semester } from "./timetableSlice";
 import { ModuleData, TimetableSnapshot } from "@/types/plannerTypes";
-import { AppDispatch, RootState } from ".";
+import type { StudentContext } from '@/types/prerequisiteTypes';
+import type { RootState } from ".";
 import { uniqueTimetableName } from "@/utils/planner/uniqueTimetableName";
 import {
   createStarterTimetableState,
@@ -10,6 +11,7 @@ import {
 
 export interface Timetable {
   name: string;
+  studentContext: StudentContext | null;
   modules: EntityState<ModuleData, string>;
   semesters: EntityState<Semester, number>;
 }
@@ -39,6 +41,7 @@ export const plannerSlice = createSlice({
         timetableAdapter.addOne(state.timetables, {
           name: STARTER_TIMETABLE_NAME,
           ...starterTimetable,
+          studentContext: null,
         });
         state.activeTimetableName = STARTER_TIMETABLE_NAME;
       }
@@ -47,6 +50,7 @@ export const plannerSlice = createSlice({
     timetableAdded: (state, action: PayloadAction<{ name: string }>) => {
       timetableAdapter.addOne(state.timetables, {
         name: action.payload.name,
+        studentContext: null,
         modules: { ids: [], entities: {} },
         semesters: { ids: [], entities: {} },
       });
@@ -99,14 +103,16 @@ export const plannerSlice = createSlice({
         name: string;
         modules?: EntityState<ModuleData, string>;
         semesters?: EntityState<Semester, number>;
+        studentContext?: StudentContext | null;
       }>
     ) => {
-      const { name, modules, semesters } = action.payload;
+      const { name, modules, semesters, studentContext } = action.payload;
       timetableAdapter.updateOne(state.timetables, {
         id: name,
         changes: {
           ...(modules && { modules }),
           ...(semesters && { semesters }),
+          ...(studentContext !== undefined && { studentContext: normalizeStudentContext(studentContext) }),
         },
       });
     },
@@ -134,6 +140,7 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
   async (nextName, { getState, dispatch }) => {
     const state = getState()
     const current = state.planner.activeTimetableName
+    if (!state.planner.timetables.entities[nextName]) return;
 
     // Save the current working timetable (if one exists)
     if (current && current !== nextName) {
@@ -142,6 +149,7 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
           name: current,
           modules: state.timetable.modules,
           semesters: state.timetable.semesters,
+          studentContext: state.timetable.studentContext ?? null,
         })
       )
     }
@@ -156,6 +164,7 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
         timetableLoaded({
           modules: Object.values(next.modules.entities).filter(Boolean),
           semesters: Object.values(next.semesters.entities).filter(Boolean),
+          studentContext: next.studentContext ?? null,
         })
       )
     }
@@ -163,8 +172,8 @@ export const switchTimetable = createAsyncThunk<void, string, { state: RootState
 )
 
 export const importTimetableFromSnapshot =
-  (snapshot: TimetableSnapshot, name: string) =>
-    async (dispatch: AppDispatch) => {
+  (snapshot: TimetableSnapshot, name: string): ThunkAction<Promise<void>, RootState, unknown, UnknownAction> =>
+    async (dispatch) => {
 
       // fetch full module data
       const modulesData: ModuleData[] = (
@@ -199,7 +208,7 @@ export const importTimetableFromSnapshot =
 
       // update store
       dispatch(timetableAdded({ name }));
-      dispatch(timetableUpdated({ name, modules, semesters }));
+      dispatch(timetableUpdated({ name, modules, semesters, studentContext: null }));
       dispatch(switchTimetable(name));
       dispatch(updateModuleStates());
     };

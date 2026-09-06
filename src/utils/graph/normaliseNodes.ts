@@ -19,6 +19,7 @@ export function normaliseNodes(graph: FormattedGraph): NormalisedGraph {
 
   // Count outgoing edges for each node
   for (const rel of relationships) {
+    if (!nodes[rel.from] || !nodes[rel.to]) throw new Error(`Missing graph node for relationship ${rel.id}`);
     outgoingEdges[rel.from] ??= 0;
     outgoingEdges[rel.from]++;
   }
@@ -30,7 +31,7 @@ export function normaliseNodes(graph: FormattedGraph): NormalisedGraph {
       if (node.type === "AND") {
         const out = outgoingEdges[id] ?? 0;
         if (out <= 0) {
-          console.warn(`AND node ${id} has no outgoing edges!!!!!!!!!!!!!!`);
+          throw new Error(`Empty AND prerequisite ${id}`);
         }
         nodes[id] = {
           id,
@@ -43,6 +44,13 @@ export function normaliseNodes(graph: FormattedGraph): NormalisedGraph {
           type: "NOF",
           n: 1,
         };
+      } else if (node.type === "BLOCKED") {
+        if (outgoingEdges[id]) throw new Error(`Blocked prerequisite ${id} has children`);
+        nodes[id] = { id, type: "NOF", n: 1, blockedReason: node.reason };
+      } else if (node.type !== "NOF") {
+        throw new Error(`Unresolved prerequisite ${node.type} at ${id}`);
+      } else if (!Number.isSafeInteger(node.n) || node.n < 1 || (node.blockedReason && outgoingEdges[id])) {
+        throw new Error(`Invalid prerequisite threshold or blocked gate at ${id}`);
       }
     }
   }

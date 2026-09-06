@@ -116,3 +116,59 @@ describe('scheduler choice handling', () => {
       .not.toContain('T');
   });
 });
+
+describe('cleanup of prerequisite chains backed by trusted history', () => {
+  const prerequisiteChain = (): NormalisedGraph => ({
+    nodes: {
+      foundation: moduleNode('foundation', 'RE1702', []),
+      dao: moduleNode('dao', 'DAO2702'),
+      daoX: moduleNode('daoX', 'DAO2702X'),
+      dba: moduleNode('dba', 'DBA3701'),
+      target: moduleNode('target', 'MA4254'),
+      daoRequirement: { id: 'daoRequirement', type: 'NOF', n: 1 },
+      daoXRequirement: { id: 'daoXRequirement', type: 'NOF', n: 1 },
+      choice: { id: 'choice', type: 'NOF', n: 1 },
+      targetRequirement: { id: 'targetRequirement', type: 'NOF', n: 1 },
+    },
+    edges: [
+      ['target', 'targetRequirement'], ['targetRequirement', 'dba'],
+      ['dba', 'choice'], ['choice', 'dao'], ['choice', 'daoX'],
+      ['dao', 'daoRequirement'], ['daoRequirement', 'foundation'],
+      ['daoX', 'daoXRequirement'], ['daoXRequirement', 'foundation'],
+    ].map(([from, to], index) => ({ id: String(index), from, to })),
+  });
+
+  beforeEach(() => jest.spyOn(console, 'log').mockImplementation(() => {}));
+  afterEach(() => jest.restoreAllMocks());
+
+  describe.each(['exempted', 'preserved', 'both'] as const)('%s prerequisites', (history) => {
+    test.each(['DAO2702', 'DAO2702X'])('retains DBA3701 before MA4254 when %s has unmet historical prerequisites', (code) => {
+      const preserved: Record<number, string[]> = history === 'exempted' ? {} : { 0: [code] };
+      const exempted = history === 'preserved' ? [] : [code];
+      const result = runScheduler(prerequisiteChain(), ['MA4254'], exempted, false, 20, preserved);
+      const semesters = result.timetable.semesters;
+      const expected = history === 'exempted' ? ['DBA3701', 'MA4254'] : [code, 'DBA3701', 'MA4254'];
+
+      expect(result.validation.errors).toEqual([]);
+      expect(result.isValid).toBe(true);
+      expect(semesters.flatMap(semester => semester.moduleCodes)).toEqual(expected);
+      expect(semesters.find(semester => semester.moduleCodes.includes('DBA3701'))!.id)
+        .toBeLessThan(semesters.find(semester => semester.moduleCodes.includes('MA4254'))!.id);
+    });
+  });
+
+  test('an exempted module can satisfy a chain even when its own requirement is explicitly blocked', () => {
+    const graph = prerequisiteChain();
+    graph.nodes.daoRequirement = { id: 'daoRequirement', type: 'NOF', n: 1, blockedReason: 'Historical prerequisite unavailable' };
+    graph.edges = graph.edges.filter(edge => edge.from !== 'daoRequirement');
+    const result = runScheduler(graph, ['MA4254'], ['DAO2702'], false, 20);
+    expect(result.isValid).toBe(true);
+    expect(result.timetable.semesters.flatMap(semester => semester.moduleCodes)).toEqual(['DBA3701', 'MA4254']);
+  });
+
+  test('untrusted modules still need their own prerequisites', () => {
+    const result = runScheduler(prerequisiteChain(), ['MA4254'], [], false, 20);
+    expect(result.isValid).toBe(false);
+    expect(result.timetable.semesters.flatMap(semester => semester.moduleCodes)).not.toContain('MA4254');
+  });
+});

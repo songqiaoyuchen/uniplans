@@ -63,6 +63,10 @@ export function cleanSemesters(
 
       const witness = new Set<string>();
       if (!exemptedIds.has(nodeId)) witness.add(nodeId);
+      if (exemptedIds.has(nodeId) || preservedIds.has(nodeId)) {
+        memo.set(nodeId, witness);
+        return witness;
+      }
 
       for (const prerequisiteId of new Set(children.get(nodeId) ?? [])) {
         const prerequisiteWitness = findWitness(prerequisiteId, nextVisiting);

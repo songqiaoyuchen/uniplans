@@ -13,6 +13,9 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Slider from '@mui/material/Slider';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import AdmissionStatus from './AdmissionStatus';
+import { getAdmissionContext } from '@/utils/planner/admissionStatus';
+import { isPlainRecord } from '@/utils/prerequisites/isPlainRecord';
 import { useMemo, useState, useEffect } from 'react';
 import miniModuleData from '@/data/miniModuleData.json';
 import { useLazyGetTimetableQuery } from '@/store/apiSlice';
@@ -26,7 +29,8 @@ import {
   maxMcsUpdated,
   preserveTimetableToggled,
   preserveSemestersUpdated,
-  semestersAdapter
+  semestersAdapter,
+  studentContextUpdated
 } from '@/store/timetableSlice';
 import MiniModuleCard from '../timetable/MiniModuleCard';
 import { mapModuleCodesForDisplay } from '@/utils/planner/mapModuleCodesForDisplay';
@@ -42,7 +46,8 @@ const { selectAll: selectAllSemesters } = semestersAdapter.getSelectors();
 
 const Generate: React.FC = () => {
   const dispatch = useAppDispatch();
-  const [triggerGetTimetable, { isFetching, error, data, isSuccess }] = useLazyGetTimetableQuery();
+  const [triggerGetTimetable, result] = useLazyGetTimetableQuery();
+  const { isFetching, isSuccess } = result;
   
   type SnackbarState = {
     open: boolean;
@@ -50,11 +55,7 @@ const Generate: React.FC = () => {
     severity: 'success' | 'error' | 'warning' | 'info';
   };
 
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [dismissedRequestId, setDismissedRequestId] = useState<string | null>(null);
   const [requestKey, setRequestKey] = useState(0);
 
   const targetModuleCodes = useSelector((state: RootState) => {
@@ -71,8 +72,23 @@ const Generate: React.FC = () => {
     useSpecialTerms, 
     maxMcsPerSemester, 
     preserveTimetable, 
-    preserveSemesters 
+    preserveSemesters,
+    studentContext,
+    generationRequestId
   } = useSelector((state: RootState) => state.timetable);
+  const activeTimetableName = useSelector((state: RootState) => state.planner.activeTimetableName);
+  const isCurrentRequest = !!generationRequestId && result.requestId === generationRequestId;
+  const data = isCurrentRequest && !isFetching ? result.currentData : undefined;
+  const error = isCurrentRequest ? result.error : undefined;
+  const errorData = error && 'data' in error ? error.data : null;
+  const generationErrorMessage = isPlainRecord(errorData) && typeof errorData.error === 'string'
+    ? errorData.error : 'Error generating timetable. Please try again.';
+  const { cohortYear, programmeType } = getAdmissionContext(studentContext);
+  useEffect(() => {
+    if (studentContext?.programmeType == null) {
+      dispatch(studentContextUpdated({ cohortYear, programmeType }));
+    }
+  }, [dispatch, cohortYear, programmeType, studentContext?.programmeType]);
 
   const allSemesters = useSelector((state: RootState) => selectAllSemesters(state.timetable.semesters));
   const maxSemesterId = useMemo(() => {
@@ -101,44 +117,25 @@ const Generate: React.FC = () => {
   };
 
   // Handle generation result feedback
-  useEffect(() => {
+  const snackbar: SnackbarState = (() => {
+    const closed: SnackbarState = { open: false, message: '', severity: 'info' };
     if (isFetching || requestKey === 0) {
-      return; // Don't show result while still fetching or before first request
+      return closed; // Don't show result while still fetching or before first request
     }
-    
     if (isSuccess && data) {
-      const semesterCount = data.timetable.semesters.length;
       if (!data.isValid) {
-        setSnackbar({
-          open: true,
-          message: 'Generation error: the proposed timetable is invalid. Review it before using.',
-          severity: 'warning'
-        });
-      } else if (semesterCount === 0) {
-        setSnackbar({
-          open: true,
-          message: 'No valid timetable could be generated.',
-          severity: 'warning'
-        });
-      } else {
-        setSnackbar({
-          open: true,
-          message: `Successfully generated timetable.`,
-          severity: 'success'
-        });
+        return { open: true, message: 'Generation error: the proposed timetable is invalid. Review it before using.', severity: 'warning' };
       }
-    } else if (error) {
-      setSnackbar({
-        open: true,
-        message: 'Error generating timetable. Please try again.',
-        severity: 'error'
-      });
+      return data.timetable.semesters.length === 0
+        ? { open: true, message: 'No valid timetable could be generated.', severity: 'warning' }
+        : { open: true, message: 'Successfully generated timetable.', severity: 'success' };
     }
-  }, [isSuccess, data, error, isFetching, requestKey]);
+    return error ? { open: true, message: generationErrorMessage, severity: 'error' } : closed;
+  })();
 
   const handleGenerate = () => {
     // Close any existing snackbar and increment request key
-    setSnackbar((s) => ({ ...s, open: false }));
+    setDismissedRequestId(generationRequestId);
     setRequestKey(prev => prev + 1);
     
     const preservedData: Record<number, string[]> = {};
@@ -159,7 +156,9 @@ const Generate: React.FC = () => {
       useSpecialTerms: useSpecialTerms,
       maxMcsPerSemester: maxMcsPerSemester,
       preserveTimetable: preserveTimetable,
-      preservedData: preservedData
+      preservedData: preservedData,
+      studentContext: { cohortYear, programmeType },
+      clientTimetableName: activeTimetableName
     });
   };
 
@@ -200,6 +199,11 @@ const Generate: React.FC = () => {
           Review your targeted and exempted modules before generating your timetable
         </Typography>
       </Box>
+
+      <AdmissionStatus
+        studentContext={{ cohortYear, programmeType }}
+        onChange={context => dispatch(studentContextUpdated(context))}
+      />
 
       {/* Target Modules Section */}
       <Box>
@@ -392,13 +396,13 @@ const Generate: React.FC = () => {
 
         {/* Snackbar for generation feedback */}
         <Snackbar
-          open={snackbar.open}
+          open={snackbar.open && isCurrentRequest && dismissedRequestId !== generationRequestId}
           autoHideDuration={data && !data.isValid ? 6000 : 2000}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          onClose={() => setDismissedRequestId(generationRequestId)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
           <Alert
-            onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+            onClose={() => setDismissedRequestId(generationRequestId)}
             severity={snackbar.severity}
             variant="filled"
             sx={{ width: '100%' }}
@@ -415,7 +419,7 @@ const Generate: React.FC = () => {
           fullWidth
           size="large"
           onClick={handleGenerate}
-          disabled={!isFormValid || isFetching}
+          disabled={!isFormValid || (isCurrentRequest && isFetching)}
           sx={{ 
             py: 1.5,
             fontWeight: 600,
@@ -423,7 +427,7 @@ const Generate: React.FC = () => {
             boxShadow: 2
           }}
         >
-          {isFetching ? 'Generating...' : 'Generate Timetable'}
+          {isCurrentRequest && isFetching ? 'Generating...' : 'Generate Timetable'}
         </Button>
         
         {data && !data.isValid ? (
@@ -433,9 +437,15 @@ const Generate: React.FC = () => {
           </Alert>
         ) : null}
 
+        {data?.validation.errors.map((message, index) => (
+          <Alert key={`error-${index}`} severity="error" sx={{ mt: 1 }}>{message}</Alert>
+        ))}
+        {data?.validation.warnings.map((message, index) => (
+          <Alert key={`warning-${index}`} severity="warning" sx={{ mt: 1 }}>{message}</Alert>
+        ))}
         {error ? (
           <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-            Error generating timetable. Please try again.
+            {generationErrorMessage}
           </Typography>
         ) : null}
       </Box>

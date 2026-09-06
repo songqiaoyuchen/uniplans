@@ -36,6 +36,7 @@ export function serializeTimetable(tt: Timetable): TimetableSnapshot {
 export function deserializeTimetable(snapshot: TimetableSnapshot): {
   modules: TimetableSliceState["modules"];
   semesters: TimetableSliceState["semesters"];
+  studentContext: null;
 } {
   // 1️⃣ Build modules entity state
   const modules = modulesAdapter.setAll(
@@ -61,5 +62,5 @@ export function deserializeTimetable(snapshot: TimetableSnapshot): {
     }))
   );
 
-  return { modules, semesters };
+  return { modules, semesters, studentContext: null };
 }

@@ -53,6 +53,7 @@ const TimetableDropdown: React.FC = () => {
 
   const workingModules = useSelector((state: RootState) => state.timetable.modules);
   const workingSemesters = useSelector((state: RootState) => state.timetable.semesters);
+  const workingStudentContext = useSelector((state: RootState) => state.timetable.studentContext);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -97,6 +98,7 @@ const TimetableDropdown: React.FC = () => {
         name: dupName,
         modules: modulesClone,
         semesters: semestersClone,
+        studentContext: (nameToCopy === activeName ? workingStudentContext : src!.studentContext) ?? null,
       })
     );
     dispatch(switchTimetable(dupName));
@@ -180,7 +182,7 @@ const TimetableDropdown: React.FC = () => {
 
       await dispatch(importTimetableFromSnapshot(snapshot, name));
 
-      showSnackbar("Timetable imported successfully", "success");
+      showSnackbar("Timetable imported. Set your own admission cohort and programme in Generate.", "info");
     } catch (err) {
       console.error(err);
       showSnackbar("Failed to import timetable", "error");

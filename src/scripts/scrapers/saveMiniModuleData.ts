@@ -1,24 +1,14 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
-import { MiniModuleData } from "@/types/plannerTypes";
+import type { MiniModuleData } from "../../types/plannerTypes";
 
 // For frontend use
 export async function saveMiniModuleData(
   data: MiniModuleData[],
+  outputDir = path.join(process.cwd(), "src", "data"),
 ): Promise<void> {
-  try {
-    // Target output: src/data/moduleList.json
-    const outputDir = path.join(process.cwd(), "src", "data");
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const filePath = path.join(outputDir, "miniModuleData.json");
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-
-    console.log(`✅ Module list saved to: ${filePath}`);
-    console.log("Preview:", data.slice(0, 5));
-  } catch (error) {
-    console.error("❌ Failed to fetch or export module list:", error);
-  }
+  // Target output: src/data/moduleList.json
+  await fs.mkdir(outputDir, { recursive: true });
+  const filePath = path.join(outputDir, "miniModuleData.json");
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }

@@ -22,8 +22,17 @@ describe("validateTimetableRequest", () => {
         useSpecialTerms: false,
         maxMcsPerSemester: 20,
         preservedTimetable: {},
+        studentContext: null,
       },
     });
+  });
+
+  test("validates and retains per-timetable student context", () => {
+    const studentContext = { cohortYear: 2024, programmeType: "Undergraduate Degree" };
+    expect(validateTimetableRequest({ required: [knownCodes[0]], studentContext })).toMatchObject({
+      success: true, data: { studentContext },
+    });
+    expect(validateTimetableRequest({ required: [knownCodes[0]], studentContext: { cohortYear: "2024" } }).success).toBe(false);
   });
 
   test("rejects target arrays beyond the shared frontend limit", () => {

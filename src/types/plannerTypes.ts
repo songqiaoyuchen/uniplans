@@ -22,6 +22,7 @@ export type StaticModuleData = {
   department?: string; // optional department name
   requires?: PrereqTree; // module codes that this module requires (e.g. CS1010)
   unlocks?: string[]; // module codes that this module unlocks (e.g. CS1101S)
+  prerequisiteSchemaVersion?: number;
 }
 
 
@@ -49,14 +50,12 @@ export enum ModuleStatus {
   Conflicted = 'Conflicted', // red, conflicted due to [exam clash, invalid sem, perclusion]
 }
 
-export type PrereqTree =
-  | { type: "module"; moduleCode: string }
-  | { type: "AND"; children: PrereqTree[] }
-  | { type: "OR"; children: PrereqTree[] }
-  | { type: "NOF"; n: number; children: PrereqTree[] };
+export type PrereqTree = import("./prerequisiteTypes").PrerequisiteNode;
 
 export type ModuleIssue =
   | { type: 'PrereqUnsatisfied'}
+  | { type: 'PrerequisiteContext'; message: string }
+  | { type: 'PrerequisiteUnavailable'; message: string }
   | { type: 'Precluded'; with: string[] }
   | { type: 'InvalidSemester' }
   | { type: 'ExamClash'; with: string[] }

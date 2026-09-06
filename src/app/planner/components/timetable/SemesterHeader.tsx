@@ -35,7 +35,7 @@ const getSemesterTitles = (semesterId: number): { full: string; abbrev: string }
 export default function SemesterHeader({ semesterId, isEmpty }: SemesterHeaderProps) {
   const dispatch = useAppDispatch();
   const isMinimalView = useAppSelector(selectIsMinimalView);
-  const selectSemesterHeaderInfo = useMemo(makeSelectSemesterHeaderInfo, []);
+  const selectSemesterHeaderInfo = useMemo(() => makeSelectSemesterHeaderInfo(), []);
 
   const { totalCredits, semesterGpa } = useAppSelector((state) => 
     selectSemesterHeaderInfo(state, semesterId)

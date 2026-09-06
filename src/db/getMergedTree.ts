@@ -7,6 +7,8 @@ import type { Record as NeoRecord } from "neo4j-driver";
 import { getNeo4jDriver } from "./neo4j";
 import { mapGraph } from "@/utils/graph/mapGraph";
 import { FormattedGraph } from "@/types/graphTypes";
+import { checkImportMetadata } from "./checkImportMetadata";
+import { GraphDataError } from "./graphDataError";
 
 /**
  * Merges prerequisite subgraphs for multiple modules in a single Cypher call,
@@ -16,11 +18,12 @@ export async function getMergedTree(
   moduleCodes: string[],
 ): Promise<FormattedGraph> {
   const driver = getNeo4jDriver();
-  const session = driver.session(); 
+  const session = driver.session();
   try {
+    const publicationId = await checkImportMetadata(session);
     // Single Cypher query to unwind, collect, and dedupe subgraphs
     const result = await session.run(
-      ` 
+      `
         UNWIND $moduleCodes AS code
         MATCH (m:Module { moduleCode: code })
         CALL apoc.path.subgraphAll(
@@ -38,6 +41,9 @@ export async function getMergedTree(
       `,
       { moduleCodes },
     );
+    if (await checkImportMetadata(session) !== publicationId) {
+      throw new GraphDataError("Prerequisite graph changed during retrieval; retry generation");
+    }
 
     if (!result.records.length || !result.records[0].has("nodes")) {
       return { nodes: {}, relationships: [] };

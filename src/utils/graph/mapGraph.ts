@@ -7,6 +7,9 @@
 import { Edge, LogicNode, FormattedGraph } from "@/types/graphTypes";
 import type { Node as NeoNode } from "neo4j-driver";
 import { Neo4jGraph } from "@/types/neo4jTypes";
+import type { PrerequisiteCondition } from "@/types/prerequisiteTypes";
+import { parseCondition } from "@/utils/prerequisites/parsePrerequisite";
+import { isPlainRecord } from "@/utils/prerequisites/isPlainRecord";
 import {
   AVAIL_GRADES,
   Exam,
@@ -38,12 +41,34 @@ export function mapGraph(graph: Neo4jGraph): FormattedGraph {
       } else if (type === "OR") {
         nodes[id] = { id, type: "OR" };
       } else if (type === "NOF") {
-        nodes[id] = { id, type: "NOF", n: node.properties.threshold ?? 1 };
+        const threshold = node.properties.threshold;
+        const n = typeof threshold === "number" ? threshold : threshold?.toNumber?.();
+        if (!Number.isSafeInteger(n) || n < 1) throw new Error(`Invalid prerequisite threshold at ${id}`);
+        nodes[id] = { id, type: "NOF", n };
+      } else if (type === "CONDITION" || type === "CONDITIONAL") {
+        nodes[id] = { id, type, condition: parseStoredCondition(node.properties.condition) };
+      } else if (type === "BLOCKED") {
+        if (typeof node.properties.reason !== "string" || !node.properties.reason) throw new Error(`Missing blocked prerequisite reason at ${id}`);
+        nodes[id] = { id, type, reason: node.properties.reason, moduleCode: node.properties.moduleCode };
+      } else if (type === "CONSTANT") {
+        if (typeof node.properties.value !== "boolean") throw new Error(`Invalid prerequisite constant at ${id}`);
+        nodes[id] = { id, type, value: node.properties.value };
+      } else {
+        throw new Error(`Unsupported prerequisite logic ${String(type)} at ${id}`);
       }
     }
   }
 
   return { nodes, relationships };
+}
+
+function parseStoredCondition(raw: unknown): PrerequisiteCondition {
+  const value: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (!isPlainRecord(value) || (value.kind !== "cohort" && value.kind !== "programType")) {
+    throw new Error("Invalid stored prerequisite condition");
+  }
+  const { kind, ...rule } = value;
+  return parseCondition(kind, rule, "stored prerequisite condition");
 }
 
 export function mapModuleData(node: NeoNode): ModuleData {
@@ -108,7 +133,7 @@ export function mapModuleData(node: NeoNode): ModuleData {
   }
 
   return {
-    id: node.identity.toString(),
+    id: node.elementId,
     code: props.moduleCode,
     title: props.title?.trim() ?? "Untitled Module",
     credits: parseInt(props.moduleCredit ?? "0"),

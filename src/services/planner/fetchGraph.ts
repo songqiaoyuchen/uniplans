@@ -2,6 +2,7 @@
 // Neo4j API for fetching Graph
 
 import axios from "axios";
+import type { StudentContext } from "@/types/prerequisiteTypes";
 
 export async function fetchFormattedGraph(moduleCodes: string[]) {
   try {
@@ -18,10 +19,11 @@ export async function fetchFormattedGraph(moduleCodes: string[]) {
   }
 }
 
-export async function fetchNormalisedGraph(moduleCodes: string[]) {
+export async function fetchNormalisedGraph(moduleCodes: string[], studentContext?: StudentContext | null) {
   try {
-    const response = await axios.get("/api/normalisedGraph", {
-      params: { moduleCodes: moduleCodes.join(",") },
+    const response = await axios.post("/api/normalisedGraph", {
+      moduleCodes,
+      studentContext,
     });
     return response.data;
   } catch (error: unknown) {
@@ -29,7 +31,9 @@ export async function fetchNormalisedGraph(moduleCodes: string[]) {
       `❌ Error fetching merged graph:`,
       error instanceof Error ? error.message : "Unknown error",
     );
-    throw error;
+    throw new Error(axios.isAxiosError(error) && typeof error.response?.data?.error === "string"
+      ? error.response.data.error
+      : "Unable to load prerequisite graph");
   }
 }
 

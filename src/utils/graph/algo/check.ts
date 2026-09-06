@@ -128,7 +128,7 @@ export function validateSchedule(
             if (currentSemesterCanSatisfy) {
               errors.push(`Module ${code} taken in semester ${semester} but prerequisite logic node cannot be satisfied by modules in the same semester`);
             } else {
-              const logicNodeLabel = getLogicNodeLabel(graph, prereq.to);
+              const logicNodeLabel = prereqNode.blockedReason ?? getLogicNodeLabel(graph, prereq.to);
               errors.push(`Module ${code} taken in semester ${semester} but prerequisite logic node ${logicNodeLabel} not satisfied`);
             }
           }
@@ -158,6 +158,29 @@ export function validateSchedule(
   
   if (missingTargets.length > 0) {
     errors.push(`Target modules not completed: ${missingTargets.join(', ')}`);
+    const outgoing = new Map<string, string[]>();
+    for (const edge of graph.edges) {
+      const children = outgoing.get(edge.from) ?? [];
+      children.push(edge.to);
+      outgoing.set(edge.from, children);
+    }
+    for (const code of missingTargets) {
+      const root = moduleToNode.get(code);
+      const stack = root ? [root] : [];
+      const visited = new Set<string>();
+      const reasons = new Set<string>();
+      while (stack.length) {
+        const id = stack.pop()!;
+        if (visited.has(id)) continue;
+        visited.add(id);
+        const node = graph.nodes[id];
+        if (isNofNode(node) && logicNodeStatus.get(id)?.satisfied) continue;
+        if (isModuleData(node) && completedModules.has(node.code)) continue;
+        if (isNofNode(node) && node.blockedReason) reasons.add(node.blockedReason);
+        stack.push(...(outgoing.get(id) ?? []));
+      }
+      for (const reason of reasons) errors.push(`${code}: ${reason}`);
+    }
   }
 
   // Check for modules that appear in timetable but aren't in graph
@@ -171,8 +194,10 @@ export function validateSchedule(
   // Check semester continuity
   if (semesters.length > 0) {
     for (let i = 1; i < semesters.length; i++) {
-      if (semesters[i] !== semesters[i-1] + 1) {
-        warnings.push(`Gap in semesters: ${semesters[i-1]} to ${semesters[i]}`);
+      const previous = semesters[i - 1];
+      const nextRegularSemester = previous + (previous % 2 === 0 ? 2 : 1);
+      if (semesters[i] > nextRegularSemester) {
+        warnings.push(`Gap in semesters: ${previous} to ${semesters[i]}`);
       }
     }
   }

@@ -1,4 +1,6 @@
 import miniModuleData from "@/data/miniModuleData.json";
+import type { StudentContext } from "@/types/prerequisiteTypes";
+import { validateStudentContext } from "@/utils/prerequisites/validateStudentContext";
 import {
   DEFAULT_MCS_PER_SEMESTER,
   isAllowedMaxMcs,
@@ -15,6 +17,7 @@ export type ValidTimetableRequest = {
   useSpecialTerms: boolean;
   maxMcsPerSemester: number;
   preservedTimetable: Record<number, string[]>;
+  studentContext: StudentContext | null;
 };
 
 export type TimetableRequestValidation =
@@ -156,6 +159,8 @@ export function validateTimetableRequest(body: unknown): TimetableRequestValidat
 
   const preserved = validatePreservedTimetable(input.preservedTimetable ?? {});
   if (!preserved.success) return preserved;
+  const context = validateStudentContext(input.studentContext);
+  if (!context.success) return context;
 
   return {
     success: true,
@@ -165,6 +170,7 @@ export function validateTimetableRequest(body: unknown): TimetableRequestValidat
       useSpecialTerms: specialTerms,
       maxMcsPerSemester: maxMcs,
       preservedTimetable: preserved.timetable,
+      studentContext: context.data,
     },
   };
 }

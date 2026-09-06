@@ -1,7 +1,7 @@
-import { LogicType } from "@/types/neo4jTypes";
-import { Session } from "neo4j-driver";
+import type { LogicType } from "../../../types/neo4jTypes";
+import type { Neo4jExecutor } from "./buildTree/attachTree";
 
-export async function deduplicateLogicNodes(session: Session) {
+export async function deduplicateLogicNodes(session: Neo4jExecutor) {
   try {
     const types = ["OR", "AND", "NOF"];
     let globalChanged = true;
@@ -24,7 +24,7 @@ export async function deduplicateLogicNodes(session: Session) {
         } catch (err) {
           console.error(`❌ Error during ${logicType} deduplication:`, err);
           // Continue with other types even if one fails
-          continue;
+          throw err;
         }
       }
 
@@ -45,7 +45,7 @@ export async function deduplicateLogicNodes(session: Session) {
   }
 }
 
-async function deduplicateLogicType(session: Session, logicType: LogicType) {
+async function deduplicateLogicType(session: Neo4jExecutor, logicType: LogicType) {
   const cypher = buildDeduplicationQuery(logicType);
 
   let totalMerged = 0;

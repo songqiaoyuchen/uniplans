@@ -44,7 +44,7 @@ export default function GraphViewer({ graph }: GraphViewerProps) {
         elements.push({
           data: {
             id,
-            label: `${node.n}OF`,
+            label: node.blockedReason ?? `${node.n}OF`,
             type: "logic",
             originalId: id,
           },

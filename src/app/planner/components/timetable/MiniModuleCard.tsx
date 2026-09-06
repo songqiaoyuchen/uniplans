@@ -89,7 +89,7 @@ const MiniModuleCard: React.FC<MiniModuleCardProps> = ({
           position: 'relative',
 
           // Note: contain property removed as it prevents overflow:visible from working
-          contentVisibility: 'auto' as any,
+          contentVisibility: 'auto',
           willChange: 'transform, opacity',
         }}
       >

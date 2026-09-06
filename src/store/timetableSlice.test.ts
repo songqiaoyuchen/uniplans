@@ -4,6 +4,9 @@ import reducer, {
   exemptedModuleAdded,
   maxMcsUpdated,
   moduleAdded,
+  moduleCached,
+  studentContextUpdated,
+  updateModuleStates,
   semesterAdded,
   targetModuleAdded,
   timetableLoaded,
@@ -59,6 +62,7 @@ const fulfilledGeneration = (
   payload,
   meta: {
     requestStatus: "fulfilled",
+    requestId: 'generation-request',
     arg: {
       endpointName: "getTimetable",
       originalArgs: {
@@ -70,6 +74,14 @@ const fulfilledGeneration = (
     },
   },
 });
+const pendingGeneration = (requestId = 'generation-request') => ({
+  type: 'api/executeQuery/pending',
+  meta: { requestStatus: 'pending', requestId, arg: { endpointName: 'getTimetable' } },
+});
+
+const applyGeneration = (state: ReturnType<typeof reducer> | undefined, action: Parameters<typeof reducer>[1]) =>
+  reducer(reducer(state, pendingGeneration()), action);
+
 describe("generated timetable results", () => {
   test("retains the proposed timetable when scheduler validation fails", () => {
     const payload: TimetableGenerationResult = {
@@ -92,11 +104,12 @@ describe("generated timetable results", () => {
       },
     };
 
-    const state = reducer(undefined, {
+    const state = applyGeneration(undefined, {
       type: "api/executeQuery/fulfilled",
       payload,
       meta: {
         requestStatus: "fulfilled",
+        requestId: 'generation-request',
         arg: { endpointName: "getTimetable" },
       },
     });
@@ -126,7 +139,7 @@ describe("generated timetable results", () => {
       })
     );
 
-    const state = reducer(
+    const state = applyGeneration(
       initialState,
       fulfilledGeneration(
         generationResult([
@@ -155,7 +168,7 @@ describe("generated timetable results", () => {
       })
     );
 
-    const state = reducer(
+    const state = applyGeneration(
       initialState,
       fulfilledGeneration(
         generationResult([{ id: 0, moduleCodes: ["CS1010"] }])
@@ -185,6 +198,63 @@ describe("timetable and exemption mutual exclusivity", () => {
 
     expect(state.exemptedModules).toEqual([]);
     expect(state.semesters.entities[0]?.moduleCodes).toEqual(["CS1010"]);
+  });
+});
+
+describe('private student context and prerequisite cache', () => {
+  const context = { cohortYear: 2024, programmeType: 'Undergraduate Degree' };
+
+  test('defaults legacy timetables to unset, without inheriting the previous context', () => {
+    let state = reducer(undefined, studentContextUpdated(context));
+    expect(state.studentContext).toEqual(context);
+    state = reducer(state, timetableLoaded({ modules: [], semesters: [] }));
+    expect(state.studentContext).toBeNull();
+  });
+
+  test('refreshes lossy prerequisites while preserving dynamic metadata', () => {
+    const oldModule = moduleData('CS2040', { grade: 'A', tags: ['core'], status: ModuleStatus.Completed });
+    const legacy = reducer(undefined, timetableLoaded({ modules: [oldModule], semesters: [{ id: 0, moduleCodes: ['CS2040'] }] }));
+    expect(legacy.modules.entities.CS2040.requires?.type).toBe('blocked');
+    const fresh = moduleData('CS2040', { prerequisiteSchemaVersion: 2, requires: { type: 'module', moduleCode: 'CS1010' } });
+    const state = reducer(legacy, moduleCached({ module: fresh }));
+    expect(state.modules.entities.CS2040).toMatchObject({
+      prerequisiteSchemaVersion: 2,
+      requires: fresh.requires,
+      grade: 'A',
+      tags: ['core'],
+      status: ModuleStatus.Completed,
+    });
+    expect(state.semesters).toBe(legacy.semesters);
+    expect(reducer(state, moduleCached({ module: oldModule })).modules).toBe(state.modules);
+    const cleared = reducer(state, moduleCached({ module: { ...fresh, requires: undefined } }));
+    expect(cleared.modules.entities.CS2040.requires).toBeUndefined();
+  });
+
+  test('ignores generation responses after context changes, including changes back', () => {
+    let state = reducer(undefined, studentContextUpdated(context));
+    state = reducer(state, pendingGeneration());
+    state = reducer(state, studentContextUpdated(null));
+    state = reducer(state, studentContextUpdated(context));
+    const result = reducer(state, fulfilledGeneration(generationResult([{ id: 0, moduleCodes: ['CS1010'] }])));
+    expect(result.semesters.ids).toEqual([]);
+  });
+
+  test('ignores responses after loading a different timetable or starting a newer request', () => {
+    let state = reducer(undefined, pendingGeneration());
+    state = reducer(state, timetableLoaded({ modules: [], semesters: [{ id: 4, moduleCodes: [] }], studentContext: context }));
+    state = reducer(state, pendingGeneration('new-request'));
+    const result = reducer(state, fulfilledGeneration(generationResult([{ id: 0, moduleCodes: ['CS1010'] }])));
+    expect(result.semesters.ids).toEqual([4]);
+  });
+
+  test('ignores prerequisite checks computed for a previous context', () => {
+    let state = reducer(undefined, moduleCached({ module: moduleData('CS1010') }));
+    state = reducer(state, updateModuleStates.pending('old-check', undefined));
+    state = reducer(state, studentContextUpdated(context));
+    const result = reducer(state, updateModuleStates.fulfilled([
+      { id: 'CS1010', changes: { status: ModuleStatus.Satisfied, issues: [] } },
+    ], 'old-check', undefined));
+    expect(result.modules.entities.CS1010.status).toBeUndefined();
   });
 });
 

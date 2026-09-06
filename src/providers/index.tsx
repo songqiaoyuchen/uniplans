@@ -15,7 +15,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         onBeforeLift={() => {
           try {
             store.dispatch(plannerInitialised());
-          } catch (e) {
+          } catch {
             // noop
           }
         }}
