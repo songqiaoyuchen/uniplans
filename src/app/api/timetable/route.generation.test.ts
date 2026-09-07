@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getMergedTree } from "@/db/getMergedTree";
 import { GraphDataError } from "@/db/graphDataError";
+import { getModuleByCode } from "@/db/getModuleByCode";
 import type { FormattedGraph } from "@/types/graphTypes";
 import { POST } from "./route";
 
@@ -62,6 +63,32 @@ describe("timetable generation with context and blocked requirements", () => {
     const response = await POST(request({ required: ["AR3328"], studentContext: { cohortYear: "2024" } }));
     expect(response.status).toBe(400);
     expect(getMergedTree).not.toHaveBeenCalled();
+  });
+
+  test("keeps both MA4254 and DBA3701 targets when a conflicting mathematics route is available earlier", async () => {
+    const codes = ["MA4254", "MA3252", "DBA3701", "DAO2702", "RE1702", "MA2001"];
+    const graph: FormattedGraph = { nodes: { choice: { id: "choice", type: "OR" } }, relationships: [] };
+    for (const code of codes) {
+      const course = await getModuleByCode(code);
+      expect(course).not.toBeNull();
+      graph.nodes[code] = { ...course!, id: code };
+    }
+    graph.relationships = [
+      ["MA4254", "choice"], ["choice", "MA3252"], ["choice", "DBA3701"],
+      ["MA3252", "MA2001"], ["DBA3701", "DAO2702"], ["DAO2702", "RE1702"],
+    ].map(([from, to], index) => ({ id: String(index), from, to }));
+    jest.mocked(getMergedTree).mockResolvedValue(graph);
+    const response = await POST(request({
+      required: ["MA4254", "DBA3701"], exempted: ["MA2001"],
+      studentContext: { cohortYear: 2024, programmeType: "Undergraduate Degree" },
+    }));
+    const result = await response.json();
+    expect(response.status).toBe(200);
+    expect(result.validation.errors).toEqual([]);
+    expect(result.isValid).toBe(true);
+    const scheduled = result.timetable.semesters.flatMap((semester: { moduleCodes: string[] }) => semester.moduleCodes);
+    expect(scheduled).toEqual(expect.arrayContaining(["DAO2702", "DBA3701", "MA4254"]));
+    expect(scheduled).not.toContain("MA3252");
   });
 
   test("stale graph data is reported as temporarily unavailable", async () => {

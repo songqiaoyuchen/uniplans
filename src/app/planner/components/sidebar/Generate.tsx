@@ -124,7 +124,7 @@ const Generate: React.FC = () => {
     }
     if (isSuccess && data) {
       if (!data.isValid) {
-        return { open: true, message: 'Generation error: the proposed timetable is invalid. Review it before using.', severity: 'warning' };
+        return { open: true, message: 'Generation error', severity: 'warning' };
       }
       return data.timetable.semesters.length === 0
         ? { open: true, message: 'No valid timetable could be generated.', severity: 'warning' }
@@ -432,15 +432,11 @@ const Generate: React.FC = () => {
         
         {data && !data.isValid ? (
           <Alert severity="warning" variant="outlined" sx={{ mt: 1 }}>
-            Generation error: this proposed timetable failed validation and may
-            violate prerequisites or scheduling constraints.
+            Generation error
           </Alert>
         ) : null}
 
-        {data?.validation.errors.map((message, index) => (
-          <Alert key={`error-${index}`} severity="error" sx={{ mt: 1 }}>{message}</Alert>
-        ))}
-        {data?.validation.warnings.map((message, index) => (
+        {data?.isValid && data.validation.warnings.map((message, index) => (
           <Alert key={`warning-${index}`} severity="warning" sx={{ mt: 1 }}>{message}</Alert>
         ))}
         {error ? (

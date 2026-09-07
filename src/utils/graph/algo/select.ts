@@ -32,6 +32,16 @@ export function selectModulesForSemester(
 
     const node = graph.nodes[bestModuleId];
     if (!isModuleData(node)) throw new Error("Node is not ModuleData");
+    const conflictsWithTarget = [...targetModules].some(targetId => {
+      const target = graph.nodes[targetId];
+      return targetId !== bestModuleId && isModuleData(target) &&
+        (node.preclusions.includes(target.code) || target.preclusions.includes(node.code));
+    });
+    if (conflictsWithTarget) {
+      remainingModules.delete(bestModuleId);
+      plannerState.redundantModules.add(bestModuleId);
+      continue;
+    }
     
     // Check if this module is precluded by any already completed modules
     let isPrecluded = false;
