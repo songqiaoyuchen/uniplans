@@ -2,7 +2,6 @@ import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -17,9 +16,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import EditIcon from "@mui/icons-material/Edit";
 import { closeSidebar, openSidebar, resolveSidebarOpen } from "@/store/sidebarSlice";
-import CheckIcon from "@mui/icons-material/Check";
 import { useAppSelector } from "@/store";
 import { minimalViewToggled } from "@/store/timetableSlice";
 import { useDispatch } from "react-redux";
@@ -29,7 +26,6 @@ import {
   selectLatestNormalSemester,
   selectTotalCredits,
 } from "@/store/timetableSelectors";
-import { timetableRenamed } from "@/store/plannerSlice";
 import TimetableDropdown from "./TimetableDropdown"; 
 
 const TimetableHeader: React.FC = () => {
@@ -42,15 +38,6 @@ const TimetableHeader: React.FC = () => {
   const activeName = useAppSelector(
     (state) => state.planner.activeTimetableName
   ) ?? "New Timetable";
-
-  // Title editing mirrors active timetable name
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [tempName, setTempName] = useState(activeName);
-  const [previousName, setPreviousName] = useState(activeName);
-  if (previousName !== activeName) {
-    setPreviousName(activeName);
-    setTempName(activeName);
-  }
 
   const totalCredits = useAppSelector(selectTotalCredits);
   const Cgpa = useAppSelector(selectCgpa);
@@ -65,17 +52,6 @@ const TimetableHeader: React.FC = () => {
   const openStats = Boolean(statsAnchor);
   const handleOpenStats = (e: React.MouseEvent<HTMLElement>) => setStatsAnchor(e.currentTarget);
   const handleCloseStats = () => setStatsAnchor(null);
-
-  const commitRename = () => {
-    const trimmed = tempName.trim();
-    if (!trimmed || trimmed === activeName) {
-      setIsEditingName(false);
-      setTempName(activeName);
-      return;
-    }
-    dispatch(timetableRenamed({ oldName: activeName, newName: trimmed }));
-    setIsEditingName(false);
-  };
 
   return (
     <Box sx={{ px: 0.5, py: { xs: 0.25, md: 1 } }}>
@@ -95,67 +71,21 @@ const TimetableHeader: React.FC = () => {
       >
         {/* LEFT: Title actions */}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
-          {isEditingName ? (
-            <TextField
-              variant="standard"
-              autoFocus
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commitRename();
-                } else if (e.key === "Escape") {
-                  setIsEditingName(false);
-                  setTempName(activeName);
-                }
-              }}
-              sx={{
-                minWidth: 0,
-                maxWidth: 300,
-                '& .MuiInput-input': {
-                  fontSize: '1.5rem',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                },
-              }}
-            />
-          ) : (
-            <Typography
-              variant="h4"
-              onClick={() => setIsEditingName(true)}
-              sx={{
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 300,
-                py: 0.85,
-                fontSize: '1.5rem',
-                lineHeight: 1.15,
-              }}
-              title={activeName}
-            >
-              {activeName}
-            </Typography>
-          )}
-
-          <Tooltip title={isEditingName ? "Save name" : "Edit name"}>
-            <IconButton
-              size="small"
-              onClick={() => (isEditingName ? commitRename() : setIsEditingName(true))}
-              sx={{ 
-                color: isEditingName ? "success.main" : "text.secondary",
-                borderRadius: 1.5,
-                "&:hover": { bgcolor: { xs: "transparent", md: "action.hover" } }
-              }}
-            >
-              {isEditingName ? <CheckIcon fontSize="small" /> : <EditIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
+          <Typography
+            variant="h4"
+            sx={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: 300,
+              py: 0.85,
+              fontSize: '1.5rem',
+              lineHeight: 1.15,
+            }}
+            title={activeName}
+          >
+            {activeName}
+          </Typography>
 
           <TimetableDropdown />
         </Stack>
@@ -198,67 +128,21 @@ const TimetableHeader: React.FC = () => {
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
         {/* Row 1: Title + Dropdown */}
         <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0, mb: 0.5 }}>
-          {isEditingName ? (
-            <TextField
-              variant="standard"
-              autoFocus
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commitRename();
-                } else if (e.key === "Escape") {
-                  setIsEditingName(false);
-                  setTempName(activeName);
-                }
-              }}
-              sx={{
-                minWidth: 0,
-                flex: 1,
-                '& .MuiInput-input': {
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                },
-              }}
-            />
-          ) : (
-            <Typography
-              variant="h4"
-              onClick={() => setIsEditingName(true)}
-              sx={{
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                flex: 1,
-                py: 0.35,
-                fontSize: '0.95rem',
-                lineHeight: 1.15,
-              }}
-              title={activeName}
-            >
-              {activeName}
-            </Typography>
-          )}
-
-          <Tooltip title={isEditingName ? "Save" : "Edit name"}>
-            <IconButton
-              size="small"
-              onClick={() => (isEditingName ? commitRename() : setIsEditingName(true))}
-              sx={{ 
-                color: isEditingName ? "success.main" : "text.secondary",
-                borderRadius: 1.5,
-                "&:hover": { bgcolor: "action.hover" }
-              }}
-            >
-              {isEditingName ? <CheckIcon fontSize="small" /> : <EditIcon fontSize="small" />}
-            </IconButton>
-          </Tooltip>
+          <Typography
+            variant="h4"
+            sx={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              flex: 1,
+              py: 0.35,
+              fontSize: '0.95rem',
+              lineHeight: 1.15,
+            }}
+            title={activeName}
+          >
+            {activeName}
+          </Typography>
 
           <TimetableDropdown />
         </Stack>

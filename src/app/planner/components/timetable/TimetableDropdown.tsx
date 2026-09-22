@@ -7,6 +7,8 @@ import {
   ListItemText,
   Divider,
   Tooltip,
+  TextField,
+  Box,
 } from "@mui/material";
 import { Snackbar, Alert } from "@mui/material";
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -15,12 +17,15 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import AddIcon from "@mui/icons-material/Add";
 import ShareIcon from "@mui/icons-material/Share";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "@/store";
 import { importTimetableFromSnapshot, switchTimetable } from "@/store/plannerSlice"; // thunk
 import {
   timetableAdded,
   timetableRemoved,
+  timetableRenamed,
   timetableUpdated,
 } from "@/store/plannerSlice";
 import type { Timetable } from "@/store/plannerSlice";
@@ -56,6 +61,8 @@ const TimetableDropdown: React.FC = () => {
   const workingStudentContext = useSelector((state: RootState) => state.timetable.studentContext);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [editingName, setEditingName] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const open = Boolean(anchorEl);
   const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);
@@ -108,7 +115,25 @@ const TimetableDropdown: React.FC = () => {
   const onDelete = (nameToDelete: string) => {
     if (nameToDelete === activeName) return;
     dispatch(timetableRemoved(nameToDelete));
-    handleClose();
+  };
+
+  const startRename = (name: string) => {
+    setEditingName(name);
+    setRenameValue(name);
+  };
+
+  const cancelRename = () => {
+    setEditingName(null);
+    setRenameValue("");
+  };
+
+  const commitRename = () => {
+    if (!editingName) return;
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== editingName) {
+      dispatch(timetableRenamed({ oldName: editingName, newName: trimmed }));
+    }
+    cancelRename();
   };
 
   // export / share
@@ -214,19 +239,41 @@ const TimetableDropdown: React.FC = () => {
 
   return (
     <>
-      <Tooltip title="Switch / manage timetables">
-        <IconButton 
-          size="small" 
-          onClick={handleOpen}
-          sx={{
-            color: "text.secondary",
-            borderRadius: 1.5,
-            "&:hover": { bgcolor: "action.hover" }
-          }}
-        >
-          <ArrowDropDownIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0 }}>
+        <Tooltip title="Create new timetable">
+          <IconButton
+            size="small"
+            aria-label="Create new timetable"
+            onClick={onCreateEmpty}
+            sx={{
+              color: "text.secondary",
+              borderRadius: 1.5,
+              width: 40,
+              height: 40,
+              p: 0,
+              "&:hover": { bgcolor: "action.hover" },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 30 }} />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Switch / manage timetables">
+          <IconButton
+            size="small"
+            aria-label="Switch / manage timetables"
+            onClick={handleOpen}
+            sx={{
+              color: "text.secondary",
+              borderRadius: 1.5,
+              p: 0,
+              "&:hover": { bgcolor: "action.hover" }
+            }}
+          >
+            <ArrowDropDownIcon sx={{ fontSize: 40 }} />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
       <Menu
         anchorEl={anchorEl}
@@ -247,12 +294,60 @@ const TimetableDropdown: React.FC = () => {
               selected={isActive}
               sx={{ gap: 1 }}
             >
-              <ListItemText
-                primary={name}
-                slotProps={{ primary: {
-                  noWrap: true,
-                  fontWeight: isActive ? 600 : 400,
-                }}} />
+              {editingName === name ? (
+                <TextField
+                  variant="standard"
+                  size="small"
+                  autoFocus
+                  fullWidth
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitRename();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      cancelRename();
+                    }
+                  }}
+                  onBlur={commitRename}
+                  slotProps={{ htmlInput: { "aria-label": `Rename ${name}` } }}
+                  sx={{ minWidth: 0 }}
+                />
+              ) : (
+                <ListItemText
+                  primary={name}
+                  slotProps={{ primary: {
+                    noWrap: true,
+                    fontWeight: isActive ? 600 : 400,
+                  }}} />
+              )}
+              <Tooltip title="Rename">
+                <IconButton
+                  edge="end"
+                  size="small"
+                  onMouseDown={(e) => {
+                    if (editingName === name) e.preventDefault();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (editingName === name) {
+                      commitRename();
+                    } else {
+                      startRename(name);
+                    }
+                  }}
+                >
+                  {editingName === name ? (
+                    <CheckIcon fontSize="inherit" />
+                  ) : (
+                    <EditIcon fontSize="inherit" />
+                  )}
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Duplicate">
                 <IconButton
                   edge="end"
@@ -297,13 +392,6 @@ const TimetableDropdown: React.FC = () => {
         })}
 
         <Divider sx={{ my: 0.5 }} />
-
-        <MenuItem dense onClick={onCreateEmpty} sx={{ gap: 1 }}>
-          <ListItemIcon>
-            <AddIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Create new timetable" />
-        </MenuItem>
 
         <MenuItem
           dense
