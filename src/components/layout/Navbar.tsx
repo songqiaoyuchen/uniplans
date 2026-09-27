@@ -18,7 +18,6 @@ import Backdrop from "@mui/material/Backdrop";
 import CloseIcon from "@mui/icons-material/Close";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useThemeMode } from "@/providers/ThemeProvider";
 
@@ -29,7 +28,6 @@ const pages = [
     href: "/planner",
     icon: <CalendarMonthOutlinedIcon />,
   },
-  { name: "Explore", href: "/explore", icon: <ExploreOutlinedIcon /> },
 ];
 
 const settings = ["Profile", "Account", "Logout"];
