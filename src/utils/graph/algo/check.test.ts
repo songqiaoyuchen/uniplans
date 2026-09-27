@@ -128,7 +128,7 @@ describe('validateSchedule exemptions', () => {
 
 });
 
-describe('semester continuity warnings', () => {
+describe('semester gaps', () => {
   function validateSemesters(ids: number[]) {
     const graph: NormalisedGraph = {
       nodes: Object.fromEntries(ids.map(id => [`module-${id}`, moduleNode(`module-${id}`, `TEST${id}`)])),
@@ -155,7 +155,11 @@ describe('semester continuity warnings', () => {
     [1, 4],
     [3, 5],
     [4, 8],
-  ])('still reports a missing regular semester between %i and %i', (previous, next) => {
-    expect(validateSemesters([previous, next]).warnings).toEqual([`Gap in semesters: ${previous} to ${next}`]);
+    [8, 12],
+  ])('accepts a missing regular semester between %i and %i without warnings', (previous, next) => {
+    const result = validateSemesters([previous, next]);
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
   });
 });

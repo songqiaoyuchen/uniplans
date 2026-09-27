@@ -191,17 +191,6 @@ export function validateSchedule(
     }
   }
 
-  // Check semester continuity
-  if (semesters.length > 0) {
-    for (let i = 1; i < semesters.length; i++) {
-      const previous = semesters[i - 1];
-      const nextRegularSemester = previous + (previous % 2 === 0 ? 2 : 1);
-      if (semesters[i] > nextRegularSemester) {
-        warnings.push(`Gap in semesters: ${previous} to ${semesters[i]}`);
-      }
-    }
-  }
-
   const stats = {
     totalModules: flatTimetable.length,
     totalSemesters: Object.keys(bySemester).length,
