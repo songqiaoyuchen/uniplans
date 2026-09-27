@@ -38,6 +38,22 @@ a {
   text-decoration: none;
 }
 
+/* Action controls must not display a text caret, including in caret browsing. */
+:where(button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], .MuiSelect-select, .non-text-control) {
+  caret-color: transparent;
+  user-select: none;
+}
+
+/* Inputs nested in controls (such as timetable rename) remain editable. */
+:where(input, textarea, [contenteditable="true"], [contenteditable="plaintext-only"]) {
+  caret-color: auto;
+  user-select: text;
+}
+
+.non-text-control {
+  cursor: default;
+}
+
 /* @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

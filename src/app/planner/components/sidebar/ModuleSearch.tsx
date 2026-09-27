@@ -56,7 +56,22 @@ const ModuleSearch = () => {
 
   return (
     <Autocomplete
-      sx={{ width: "100%" }}
+      className="non-text-control"
+      sx={{
+        width: "100%",
+        // Only the editable input should advertise text entry, not its chrome.
+        "& .MuiInputBase-root, & .MuiInputAdornment-root": {
+          cursor: "default",
+          caretColor: "transparent",
+          userSelect: "none",
+        },
+        "& .MuiInputBase-input": {
+          cursor: "text",
+          caretColor: "auto",
+          userSelect: "text",
+        },
+        "& .MuiAutocomplete-clearIndicator": { cursor: "pointer" },
+      }}
       autoHighlight
       open={Boolean(query.trim())}
       options={results}

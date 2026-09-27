@@ -239,7 +239,7 @@ const TimetableDropdown: React.FC = () => {
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0 }}>
+      <Box className="non-text-control" sx={{ display: "flex", alignItems: "center", gap: 0 }}>
         <Tooltip title="Create new timetable">
           <IconButton
             size="small"

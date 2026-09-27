@@ -8,6 +8,7 @@ import {
   toggleSidebar,
 } from "@/store/sidebarSlice";
 import Box from "@mui/material/Box";
+import ButtonBase from "@mui/material/ButtonBase";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import useMediaQuery from "@mui/material/useMediaQuery";
@@ -64,6 +65,8 @@ const Sidebar: React.FC = () => {
         backdrop: { sx: { top: "64px" } },
         paper: {
           sx: {
+            cursor: "default",
+            caretColor: "transparent",
             top: "64px",
             bottom: "auto",
             width: "100vw",
@@ -94,6 +97,7 @@ const Sidebar: React.FC = () => {
         >
           {/* Smooth Animated Tabs - Pill Style */}
           <Box
+            className="non-text-control"
             sx={{
               display: "flex",
               alignItems: "center",
@@ -102,7 +106,7 @@ const Sidebar: React.FC = () => {
             }}
           >
             {tabs.map((tab, index) => (
-              <Box
+              <ButtonBase
                 key={index}
                 onClick={() => handleTabChange(index)}
                 sx={{
@@ -120,9 +124,8 @@ const Sidebar: React.FC = () => {
                   minHeight: "48px",
                   borderRadius: "8px",
                   userSelect: "none",
+                  "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
                 }}
-                role="button"
-                tabIndex={0}
                 aria-pressed={tabValue === index}
                 aria-label={`${tab.label} tab`}
               >
@@ -142,7 +145,7 @@ const Sidebar: React.FC = () => {
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   {tab.icon}
                 </Box>
-              </Box>
+              </ButtonBase>
             ))}
             <IconButton
               onClick={() => dispatch(closeSidebar())}
@@ -174,6 +177,8 @@ const Sidebar: React.FC = () => {
   ) : (
     <Box
       sx={{
+        cursor: "default",
+        caretColor: "transparent",
         position: "fixed",
         top: "64px",
         bottom: 0,
@@ -225,6 +230,7 @@ const Sidebar: React.FC = () => {
       >
         {isOpen && (
           <Box
+            className="non-text-control"
             sx={{
               display: "flex",
               gap: 1,
@@ -233,9 +239,11 @@ const Sidebar: React.FC = () => {
             }}
           >
             {tabs.map((tab, index) => (
-              <Box
+              <ButtonBase
                 key={index}
                 onClick={() => handleTabChange(index)}
+                aria-pressed={tabValue === index}
+                aria-label={`${tab.label} tab`}
                 sx={{
                   flex: 1,
                   display: "flex",
@@ -249,6 +257,7 @@ const Sidebar: React.FC = () => {
                   borderRadius: "8px",
                   transition: "color 0.2s",
                   zIndex: 1,
+                  "&.Mui-focusVisible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
                 }}
               >
                 {tabValue === index && (
@@ -267,7 +276,7 @@ const Sidebar: React.FC = () => {
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   {tab.icon}
                 </Box>
-              </Box>
+              </ButtonBase>
             ))}
           </Box>
         )}
