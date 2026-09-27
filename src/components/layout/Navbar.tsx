@@ -18,8 +18,9 @@ import Backdrop from "@mui/material/Backdrop";
 import CloseIcon from "@mui/icons-material/Close";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import ThemeToggle from "@/components/ui/ThemeToggle";
-import { useThemeMode } from "@/providers/ThemeProvider";
+import { getNavbarColors } from "@/styles/navbarStyles";
 
 const pages = [
   { name: "Home", href: "/", icon: <HomeOutlinedIcon /> },
@@ -28,6 +29,7 @@ const pages = [
     href: "/planner",
     icon: <CalendarMonthOutlinedIcon />,
   },
+  { name: "Customise", href: "/customise", icon: <PaletteOutlinedIcon /> },
 ];
 
 const settings = ["Profile", "Account", "Logout"];
@@ -36,7 +38,6 @@ function Navbar() {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const router = useRouter();
-  const { mode } = useThemeMode();
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
@@ -47,6 +48,8 @@ function Navbar() {
       position="fixed"
       elevation={0}
       sx={{
+        caretColor: "transparent",
+        userSelect: "none",
         height: "64px",
         zIndex: (theme) => theme.zIndex.drawer + 2,
       }}
@@ -86,13 +89,12 @@ function Navbar() {
               fontWeight: 700,
               fontSize: "1.5rem",
               letterSpacing: ".3rem",
-              color: mode == "light" ? "secondary.main" : "primary.light",
+              color: (theme) => getNavbarColors(theme).highlight,
               textDecoration: "none",
               userSelect: "none",
               cursor: "pointer",
               "&:hover": {
-                color:
-                  mode == "light" ? "secondary.light" : "primary.extraLight",
+                color: (theme) => getNavbarColors(theme).highlightHover,
               },
             }}
           >
@@ -191,13 +193,12 @@ function Navbar() {
               fontWeight: 700,
               fontSize: "1.5rem",
               letterSpacing: ".3rem",
-              color: mode == "light" ? "secondary.main" : "primary.light",
+              color: (theme) => getNavbarColors(theme).highlight,
               textDecoration: "none",
               userSelect: "none",
               cursor: "pointer",
               "&:hover": {
-                color:
-                  mode == "light" ? "secondary.light" : "primary.extraLight",
+                color: (theme) => getNavbarColors(theme).highlightHover,
               },
             }}
           >

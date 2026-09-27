@@ -1,5 +1,6 @@
 import { ModuleStatus } from "@/types/plannerTypes";
-import { createTheme, ThemeOptions } from "@mui/material/styles";
+import { alpha, createTheme, darken, getContrastRatio, lighten, ThemeOptions } from "@mui/material/styles";
+import { sanitizeThemeColors, ThemeColors, ThemeColorOverrides, ThemeMode } from "./themeColors";
 import "@fontsource/plus-jakarta-sans/400.css";
 import "@fontsource/plus-jakarta-sans/500.css";
 import "@fontsource/plus-jakarta-sans/600.css";
@@ -185,3 +186,99 @@ export const darkTheme = createTheme({
     },
   },
 });
+
+export function getThemeColors(mode: ThemeMode): ThemeColors {
+  const { palette } = mode === "light" ? lightTheme : darkTheme;
+  const backgrounds = palette.custom.moduleCard.backgroundColors;
+  return {
+    primary: palette.primary.main,
+    secondary: palette.secondary.main,
+    background: palette.background.default,
+    surface: palette.background.paper,
+    text: palette.text.primary,
+    mutedText: palette.text.secondary,
+    completed: backgrounds[ModuleStatus.Completed].slice(0, 7),
+    satisfied: backgrounds[ModuleStatus.Satisfied].slice(0, 7),
+    unsatisfied: backgrounds[ModuleStatus.Unsatisfied].slice(0, 7),
+    conflicted: backgrounds[ModuleStatus.Conflicted].slice(0, 7),
+  };
+}
+
+export function createAppTheme(mode: ThemeMode, overrides?: ThemeColorOverrides) {
+  const base = mode === "light" ? lightTheme : darkTheme;
+  const valid = sanitizeThemeColors(overrides);
+  if (Object.keys(valid).length === 0) return base;
+  const colors = { ...getThemeColors(mode), ...valid };
+  const primary = base.palette.augmentColor({ color: { main: colors.primary } });
+  const secondary = base.palette.augmentColor({ color: { main: colors.secondary } });
+  for (const accent of [primary, secondary]) {
+    accent.contrastText = getContrastRatio(accent.main, "#000000") >= getContrastRatio(accent.main, "#ffffff")
+      ? "#000000" : "#ffffff";
+  }
+  const moduleCard = base.palette.custom.moduleCard;
+  const backgroundColors = { ...moduleCard.backgroundColors };
+  const borderColors = { ...moduleCard.borderColors };
+  const statuses = {
+    completed: ModuleStatus.Completed,
+    satisfied: ModuleStatus.Satisfied,
+    unsatisfied: ModuleStatus.Unsatisfied,
+    conflicted: ModuleStatus.Conflicted,
+  } as const;
+  for (const [key, status] of Object.entries(statuses)) {
+    const value = valid[key as keyof typeof statuses];
+    if (value) {
+      backgroundColors[status] = value;
+      borderColors[status] = mode === "dark" ? lighten(value, 0.35) : darken(value, 0.3);
+    }
+  }
+  return createTheme({
+    ...base,
+    palette: {
+      ...base.palette,
+      primary: { ...primary, extraLight: lighten(colors.primary, 0.65) },
+      secondary,
+      background: { default: colors.background, paper: colors.surface },
+      text: { primary: colors.text, secondary: colors.mutedText, disabled: alpha(colors.text, 0.38) },
+      divider: alpha(colors.text, 0.16),
+      action: {
+        ...base.palette.action,
+        active: alpha(colors.text, 0.65),
+        hover: alpha(colors.text, 0.08),
+        selected: alpha(colors.text, 0.16),
+        disabled: alpha(colors.text, 0.3),
+        disabledBackground: alpha(colors.text, 0.12),
+        focus: alpha(colors.text, 0.12),
+      },
+      custom: { moduleCard: {
+        ...moduleCard, backgroundColors, borderColors,
+        selectedBorderColor: alpha(colors.primary, 0.8),
+        relatedBorderColor: alpha(colors.secondary, 0.8),
+      } },
+    },
+    components: {
+      ...base.components,
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: {
+            "*::-webkit-scrollbar": { width: "8px", height: "8px" },
+            "*::-webkit-scrollbar-track": { background: colors.background },
+            "*::-webkit-scrollbar-thumb": { backgroundColor: alpha(colors.text, 0.3), borderRadius: "4px" },
+            "*::-webkit-scrollbar-thumb:hover": { backgroundColor: alpha(colors.text, 0.5) },
+            "*": { scrollbarColor: `${alpha(colors.text, 0.3)} ${colors.background}`, scrollbarWidth: "thin" },
+          },
+        },
+      },
+      MuiInputLabel: { styleOverrides: { root: { color: colors.mutedText } } },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          input: { color: colors.text },
+          notchedOutline: { borderColor: alpha(colors.text, 0.25) },
+          root: {
+            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: primary.light },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: primary.main },
+          },
+        },
+      },
+    },
+  });
+}

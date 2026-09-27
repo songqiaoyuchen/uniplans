@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import { lightTheme, darkTheme } from "@/styles/themes";
+import { createAppTheme } from "@/styles/themes";
 import { RootState } from "@/store";
 import { toggleTheme } from "@/store/themeSlice";
 import { createContext, useContext } from "react";
@@ -23,10 +23,11 @@ export default function ThemeProvider({
 }) {
   const dispatch = useDispatch();
   const mode = useSelector((state: RootState) => state.theme.mode);
+  const colors = useSelector((state: RootState) => state.theme.customColors?.[mode]);
 
   const theme = useMemo(
-    () => (mode === "light" ? lightTheme : darkTheme),
-    [mode],
+    () => createAppTheme(mode, colors),
+    [mode, colors],
   );
 
   return (

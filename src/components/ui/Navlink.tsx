@@ -1,6 +1,6 @@
 "use client";
 
-import { useThemeMode } from "@/providers/ThemeProvider";
+import { navbarLinkStyles } from "@/styles/navbarStyles";
 import Button from "@mui/material/Button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,23 +14,11 @@ export default function NavLink({
 }) {
   const pathname = usePathname();
   const isActive = pathname === href;
-  const { mode } = useThemeMode();
 
   return (
-    <Link href={href}>
+    <Link href={href} aria-current={isActive ? "page" : undefined}>
       <Button
-        sx={{
-          color: isActive
-            ? mode == "light"
-              ? "secondary.main"
-              : "primary.light"
-            : "primary.contrastText",
-          bgcolor: "transparent",
-          borderRadius: 2,
-          px: 2,
-          py: 1,
-          "&:hover": { bgcolor: "action.hover" },
-        }}
+        sx={(theme) => navbarLinkStyles(theme, isActive)}
       >
         {children}
       </Button>
