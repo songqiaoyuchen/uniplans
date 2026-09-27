@@ -45,7 +45,6 @@ const MiniModuleCard: React.FC<MiniModuleCardProps> = ({
   const baseOutline = `2px solid ${alpha(borderColor, 0.5)}`;
 
   const selectedShadow =
-    `0 0 0 1px ${alpha(selectedBorderColor, 0.95)}, ` +
     `0 0 ${glowBlur}px ${Math.max(2, Math.round(glowBlur / 4))}px ${alpha(selectedBorderColor, 0.45)}`;
 
   const handleDelete = (e: React.MouseEvent) => {

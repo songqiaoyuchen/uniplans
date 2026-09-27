@@ -29,7 +29,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({ module, isSelected = false, isR
 
   const glowBlurPx = parseFloat(String(selectedGlowWidth || 8)) || 8;
   const glow = alpha(selectedBorderColor, 0.45);
-  const selectedShadow = `0 0 0 1px ${selectedBorderColor}, 0 0 ${glowBlurPx}px ${Math.max(
+  const selectedShadow = `0 0 ${glowBlurPx}px ${Math.max(
     2,
     Math.round(glowBlurPx / 4)
   )}px ${glow}`;
